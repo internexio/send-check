@@ -1,6 +1,11 @@
 """Deterministic Send Check signals for one draft, as JSON.
 
-Usage: pipe a JSON object on stdin, get JSON on stdout.
+Usage: pass a JSON object with --json (or on stdin), get JSON on stdout.
+
+    python3 check.py --json '{"text": "...", "message_type": "cold"}'
+
+Write apostrophes as ’ (typographic) so the single-quoted argument stays intact;
+real line breaks inside the JSON are fine.
 
     {"text": "...", "subject": "...", "message_type": "cold",
      "recipient_name": "Dana Lee", "recipient_company": "Northside Remodeling",
@@ -30,7 +35,12 @@ def main() -> None:
         return
 
     try:
-        req = json.load(sys.stdin)
+        # --json '<object>' is the preferred form: an argument matches the
+        # plugin's permission rule, input piped on stdin does not.
+        if len(sys.argv) >= 3 and sys.argv[1] == "--json":
+            req = json.loads(sys.argv[2], strict=False)   # allow real line breaks
+        else:
+            req = json.load(sys.stdin)
         text = req["text"]
     except (json.JSONDecodeError, KeyError, TypeError) as e:
         print(json.dumps({"error": f"expected JSON with a 'text' field: {e}"}))

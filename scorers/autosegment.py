@@ -22,7 +22,10 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel
+try:
+    from pydantic import BaseModel
+except ImportError:   # the plugin's standard-library scripts use only prepare() and apply()
+    BaseModel = object
 
 MAX_ROWS = 20000
 PII_HEADER = re.compile(

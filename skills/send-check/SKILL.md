@@ -13,6 +13,7 @@ description: >
   drafted in the conversation (including by outreach-composer), before the
   draft is presented. Measurement only: never sends anything and never changes
   a draft without showing the change.
+allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/*) Read
 ---
 
 # Send Check
@@ -52,15 +53,15 @@ measure and report. The owner decides.
 
 ## Step 2: Run the deterministic checks
 
-Run `scripts/check.py` from this skill's directory, passing JSON on stdin:
+Run the check script with the JSON as one single-quoted `--json` argument,
+in one command, with the full path exactly as written here. Do not pipe the
+JSON in or write it to a file: only this form runs without a permission
+prompt. Inside the JSON, write every apostrophe as a typographic ’ (never a
+straight '), so the single quotes around it stay intact. Line breaks can
+stay as real line breaks.
 
 ```bash
-python3 scripts/check.py <<'EOF'
-{"text": "<draft body>", "subject": "<subject>", "message_type": "cold",
- "recipient_name": "<name>", "recipient_company": "<company>",
- "recipient_context": "<everything known about the recipient>",
- "owner_samples": ["<sent email 1>", "<sent email 2>"]}
-EOF
+python3 ${CLAUDE_SKILL_DIR}/scripts/check.py --json '{"text": "<draft body>", "subject": "<subject>", "message_type": "cold", "recipient_name": "<name>", "recipient_company": "<company>", "recipient_context": "<everything known about the recipient>", "owner_samples": ["<sent email 1>", "<sent email 2>"]}'
 ```
 
 Leave out `owner_samples` when there are none. It returns generic-phrase
@@ -70,12 +71,12 @@ recipient details appear in the draft, `caps` (issues that block a "send"
 verdict), and, with samples, a `voice` comparison against the owner's habits.
 
 If Python is not available, apply the same checks by reading
-`corpus/generic_openers.txt` at the plugin root and the rules in
-`reference/rubric.md`, and say the scores were measured without the script.
+`${CLAUDE_PLUGIN_ROOT}/corpus/generic_openers.txt` and the rules in
+`${CLAUDE_SKILL_DIR}/reference/rubric.md`, and say the scores were measured without the script.
 
 ## Step 3: Score
 
-Score every dimension with `reference/rubric.md`: slop, personalization,
+Score every dimension with `${CLAUDE_SKILL_DIR}/reference/rubric.md`: slop, personalization,
 recipient_fit, mechanics. Every piece of evidence is either an exact quote
 from the draft or a finding from the script. Never paraphrase a quote.
 Combine into the overall score and verdict exactly as the rubric says.
@@ -83,7 +84,7 @@ Combine into the overall score and verdict exactly as the rubric says.
 ## Step 4: Write the suggested fix
 
 Skip this for "send". For "fix", write the suggested fix following the
-rubric, then fit-check it: run `scripts/check.py` on it and score it again.
+rubric, then fit-check it: run the check script on it and score it again.
 For "scrap", explain what is missing instead of patching.
 
 ## Output format
@@ -102,10 +103,24 @@ win-back offer, invoice reminders, a policy change. One message to many
 recipients is N messages, because each group reads it from its own
 situation. When a draft goes to a list:
 
-1. Ask how the list splits by facts the owner already has: tenure, last
-   visit or purchase, plan or price paid, payment history, prior agreements.
-   Two to five segments, each with a label, its facts, and roughly how many
-   people. Never invent personas or traits; use facts only.
+1. Get the segments, either way:
+   - **From a customer list file (CSV).** Never open or read the file
+     yourself: it holds personal data. Run
+     `python3 ${CLAUDE_SKILL_DIR}/scripts/segment_csv.py profile <file>` to
+     get column summaries with personal columns removed. From those, propose
+     2 to 5 segments as rules that would read this draft differently (for a
+     price increase: tenure, rate type, account type), most specific first,
+     never on protected characteristics. Pass them as one single-quoted
+     argument:
+     `python3 ${CLAUDE_SKILL_DIR}/scripts/segment_csv.py apply <file> --rules '{"segments": [{"label": "...", "why": "...", "rules": [{"column": "...", "op": ">=", "value": "..."}]}]}'`
+     (ops: < <= > >= == != in; date columns are in days ago). It returns
+     exact sizes and each segment's facts. Show the user the segments
+     before scoring. If the file is Excel, ask them to export it as CSV.
+   - **By hand.** Ask how the list splits by facts the owner already has:
+     tenure, last visit or purchase, plan or price paid, payment history,
+     prior agreements. Two to five segments, each with a label, its facts,
+     and roughly how many people.
+   Never invent personas or traits; use facts only.
 2. Run the script once on the draft (message_type `customer` for emails to
    existing customers). Generic phrasing, style, and length are the same for
    every segment.
@@ -140,5 +155,7 @@ fixes only for the drafts the user picks.
 
 - `reference/rubric.md`: dimensions, bands, weights, caps, and fix rules
 - `scripts/check.py`: deterministic checks (standard-library Python)
+- `scripts/segment_csv.py`: private CSV profiling and segment rules
+  (standard-library Python; the file's rows never reach the conversation)
 - `../../corpus/generic_openers.txt`: the generic-phrase list, with sources in
   `../../corpus/ATTRIBUTION.md`
