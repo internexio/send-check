@@ -25,7 +25,7 @@ The free tier is the instrument, a recipient-aware judge, the gate, and the log.
 ## Use it two ways
 
 - **As a Claude plugin** — runs on its own whenever Claude drafts outreach, or on request ("should I send this?"), in the style of the official [Claude for Small Business plugin](https://github.com/anthropics/knowledge-work-plugins)
-- **As a web page** — paste a draft, get a verdict in seconds (roadmap)
+- **As a web page** — fill in who it's for and the draft, get a verdict, evidence, and a suggested fix you can approve and re-score
 
 ## Install the plugin
 
@@ -57,6 +57,8 @@ uv sync
 cp .env.example .env   # optional: add keys
 uv run python -m web.app   # paste-box demo at localhost:8000
 ```
+
+Add `ANTHROPIC_API_KEY` to `.env` for the full verdict and suggested fix. Without a key the page still scores generic phrasing, style, and length, and estimates the rest.
 
 ## Status
 

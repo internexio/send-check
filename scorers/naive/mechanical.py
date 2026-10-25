@@ -54,14 +54,20 @@ def count_contractions(text: str) -> tuple[int, int]:
 def recipient_terms(context: str, exclude: str = "") -> list[str]:
     """Distinctive words from recipient context (bio, CRM notes, site copy).
 
-    Words in `exclude` (the recipient's name and company) are left out on
-    purpose: merging those into a template is not personalization.
+    Counts proper nouns (a capitalized word mid-sentence, like "Fremont")
+    and long specific words (8+ letters, like "spreadsheets"); short common
+    words match drafts by accident. Words in `exclude` (the recipient's name
+    and company) are left out on purpose: merging those into a template is
+    not personalization.
     """
-    skip = STOPWORDS | {w.lower() for w in re.findall(r"[A-Za-z'-]+", exclude)}
+    skip = STOPWORDS | {w.lower() for w in re.findall(r"[A-Za-z']+", exclude)}
     seen = []
-    for w in re.findall(r"[A-Za-z][A-Za-z'-]{4,}", context):
-        lw = w.lower()
-        if lw not in skip and lw not in seen:
+    for m in re.finditer(r"[A-Za-z][A-Za-z']+", context):
+        w, lw = m.group(), m.group().lower()
+        before = context[:m.start()].rstrip()
+        sentence_start = not before or before[-1] in '.!?:"“'
+        proper = w[0].isupper() and not sentence_start and len(w) >= 3
+        if (proper or len(w) >= 8) and lw not in skip and lw not in seen:
             seen.append(lw)
     return seen
 

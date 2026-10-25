@@ -52,7 +52,9 @@ def test_company_name_alone_is_not_personalization():
 
 
 def test_recipient_terms_skip_generic_words():
-    assert mechanical.recipient_terms("Business owner, team of 12, bakery") == ["owner", "bakery"]
+    terms = mechanical.recipient_terms(
+        "Runs a 14-person shop in Tacoma. Spreadsheets aren't cutting it for scheduling.")
+    assert terms == ["tacoma", "spreadsheets", "scheduling"]
 
 
 def test_uniform_sentence_length_flagged():

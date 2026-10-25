@@ -21,9 +21,10 @@ Three layers, cheapest first:
 2. slop.py        - generic-phrase detection against corpus/generic_openers.txt
                     (n-gram overlap; no embeddings needed for v1). Skip lines
                     starting with "#".
-3. judge.py       - Claude-as-judge. Temperature 0, structured JSON output
-                    conforming to DimensionScore, one per dimension, scored
-                    against the recipient context (not the draft alone).
+3. judge.py       - Claude-as-judge. Structured JSON output (current models
+                    no longer accept a temperature setting; consistency comes
+                    from the rubric's bands), scored against the recipient
+                    context (not the draft alone).
                     The model comes from the SENDCHECK_JUDGE_MODEL env var, so
                     the judge can run on a DIFFERENT model than the one that
                     drafted the text. Independence by architecture: the

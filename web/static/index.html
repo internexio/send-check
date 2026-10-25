@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Send Check</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a65; --line: #e3e1da;
+    --accent: #c4623a; --accent-ink: #ffffff; --field: #fbfaf7;
+    --send: #2f7d4f; --send-bg: #e6f2ea; --fix: #a86a12; --fix-bg: #fbf0dc;
+    --scrap: #b23b32; --scrap-bg: #f8e3e1; --bar: #ebe9e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614; --card: #1f1f1d; --ink: #ecebe6; --muted: #a09e97; --line: #33322e;
+      --accent: #e07a4f; --accent-ink: #161614; --field: #191917;
+      --send: #6cc58f; --send-bg: #1d2e23; --fix: #e3a94b; --fix-bg: #33291a;
+      --scrap: #ec7d73; --scrap-bg: #36201e; --bar: #2c2b28;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { max-width: 1180px; margin: 0 auto; padding: 28px 20px 8px; display: flex;
+           align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 24px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); }
+  main { max-width: 1180px; margin: 0 auto; padding: 12px 20px 48px; display: grid;
+         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .card + .card { margin-top: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em;
+             color: var(--muted); font-weight: 600; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 0 0 4px; }
+  label .hint { font-weight: 400; color: var(--muted); }
+  .field { margin-bottom: 12px; }
+  input, textarea, select { width: 100%; font: inherit; color: var(--ink); background: var(--field);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
+  textarea { resize: vertical; min-height: 90px; }
+  #text { min-height: 190px; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  details summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  details[open] summary { margin-bottom: 10px; }
+  .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  button { font: inherit; font-weight: 600; border-radius: 8px; padding: 10px 16px; cursor: pointer;
+           border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button:disabled { opacity: 0.6; cursor: wait; }
+  .result { position: sticky; top: 16px; }
+  .empty { color: var(--muted); text-align: center; padding: 48px 12px; }
+  .verdict { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 10px; }
+  .verdict .badge { font-size: 26px; font-weight: 800; letter-spacing: 0.04em; }
+  .verdict .score { font-size: 15px; }
+  .verdict .score b { font-size: 22px; }
+  .verdict.send { background: var(--send-bg); color: var(--send); }
+  .verdict.fix { background: var(--fix-bg); color: var(--fix); }
+  .verdict.scrap { background: var(--scrap-bg); color: var(--scrap); }
+  .delta { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .notes { margin: 12px 0 0; padding: 0; list-style: none; font-size: 13px; }
+  .notes li { padding: 8px 10px; border-left: 3px solid var(--scrap); background: var(--field);
+              border-radius: 0 6px 6px 0; margin-bottom: 6px; }
+  .notes li.info { border-left-color: var(--line); color: var(--muted); }
+  .dim { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .dim:last-child { border-bottom: 0; }
+  .dim-head { display: flex; justify-content: space-between; font-weight: 600; }
+  .bar { height: 6px; background: var(--bar); border-radius: 3px; margin: 6px 0 8px; overflow: hidden; }
+  .bar span { display: block; height: 100%; border-radius: 3px; }
+  .dim ul { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  .dim .tip { font-size: 13px; margin-top: 6px; }
+  .fixbox { white-space: pre-wrap; background: var(--field); border: 1px solid var(--line);
+            border-left: 3px solid var(--fix); border-radius: 8px; padding: 12px; font-size: 14px; }
+  .small { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor;
+             border-right-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;
+             vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Send Check</h1>
+  <p>Score a draft against the person it's going to, before you hit send.</p>
+</header>
+<main>
+  <form id="form">
+    <section class="card">
+      <h2>Recipient</h2>
+      <div class="row">
+        <div class="field"><label for="name">Name</label><input id="name" placeholder="Dana Lee"></div>
+        <div class="field"><label for="role">Role</label><input id="role" placeholder="Owner"></div>
+      </div>
+      <div class="field"><label for="company">Company</label><input id="company" placeholder="Northside Remodeling"></div>
+      <div class="field">
+        <label for="context">What you know about them <span class="hint">(public work posts, bio, CRM notes)</span></label>
+        <textarea id="context" placeholder="Paste their public posts about their work, their bio, or your notes. Work-related only."></textarea>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Draft</h2>
+      <div class="row">
+        <div class="field">
+          <label for="message_type">Message type</label>
+          <select id="message_type">
+            <option value="cold">Cold first touch</option>
+            <option value="follow_up">Follow-up</option>
+            <option value="warm">Warm / referral</option>
+            <option value="post_meeting">After a meeting</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="channel">Channel</label>
+          <select id="channel">
+            <option value="email">Email</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label for="subject">Subject <span class="hint">(optional)</span></label><input id="subject"></div>
+      <div class="field"><label for="text">Message</label><textarea id="text" required placeholder="Paste the draft here."></textarea></div>
+    </section>
+
+    <section class="card">
+      <details>
+        <summary>Sounds like you? <span class="hint" style="font-weight:400;color:var(--muted)">(optional)</span></summary>
+        <label for="samples">Paste 2–3 emails you've actually sent <span class="hint">(put a line with --- between them)</span></label>
+        <textarea id="samples" style="min-height:140px"></textarea>
+      </details>
+    </section>
+
+    <div class="actions">
+      <button type="submit" class="primary" id="go">Score draft</button>
+      <button type="button" id="example">Load example</button>
+    </div>
+  </form>
+
+  <section class="result">
+    <div class="card" id="out"><div class="empty">Fill in who it's for and the draft, then press <b>Score draft</b>.</div></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const LABELS = { slop: "Sounds human", personalization: "Personalization",
+                 recipient_fit: "Fits this recipient", mechanics: "Length & ask" };
+let lastScore = null;
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const color = (n) => n >= 75 ? "var(--send)" : n >= 45 ? "var(--fix)" : "var(--scrap)";
+
+function payload() {
+  return {
+    text: $("text").value, subject: $("subject").value, channel: $("channel").value,
+    message_type: $("message_type").value,
+    recipient: { name: $("name").value, role: $("role").value, company: $("company").value, context: $("context").value },
+    owner_samples: $("samples").value.split(/^\s*---\s*$/m).map((s) => s.trim()).filter(Boolean),
+  };
+}
+
+async function run(previous = null) {
+  const btn = $("go");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Scoring…';
+  try {
+    const res = await fetch("/api/score", { method: "POST", headers: { "Content-Type": "application/json" },
+                                             body: JSON.stringify(payload()) });
+    if (!res.ok) throw new Error(`server returned ${res.status}`);
+    render(await res.json(), previous);
+  } catch (e) {
+    $("out").innerHTML = `<div class="empty">Couldn't score this draft: ${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Score draft";
+  }
+}
+
+function render(card, previous) {
+  lastScore = card.score;
+  const notes = card.notes ? card.notes.split(" | ") : [];
+  const delta = previous !== null ? `<span class="delta">was ${previous}/100</span>` : "";
+  let html = `<div class="verdict ${card.verdict}">
+      <span class="badge">${card.verdict.toUpperCase()}</span>
+      <span class="score"><b>${card.score}</b>/100</span>${delta}</div>`;
+  if (notes.length) {
+    html += `<ul class="notes">${notes.map((n) =>
+      `<li class="${n.startsWith("blocks send") ? "" : "info"}">${esc(n)}</li>`).join("")}</ul>`;
+  }
+  html += card.dimensions.map((d) => `<div class="dim">
+      <div class="dim-head"><span>${LABELS[d.name] || d.name}</span><span>${d.score}</span></div>
+      <div class="bar"><span style="width:${d.score}%;background:${color(d.score)}"></span></div>
+      ${d.evidence.length ? `<ul>${d.evidence.slice(0, 4).map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
+      ${d.suggestion ? `<div class="tip">→ ${esc(d.suggestion)}</div>` : ""}
+    </div>`).join("");
+  if (card.suggested_fix) {
+    html += `<h2 style="margin:18px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Suggested fix (approve before use)</h2>
+      <div class="fixbox" id="fix">${esc(card.suggested_fix)}</div>
+      <div class="actions">
+        <button class="primary" id="approve">Approve &amp; re-score</button>
+        <button id="copy">Copy</button>
+      </div>
+      <div class="small">Approving puts the fix in the message box and scores it again. Nothing is sent.</div>`;
+  }
+  $("out").innerHTML = html;
+  if (card.suggested_fix) {
+    $("approve").onclick = () => { $("text").value = card.suggested_fix; run(lastScore); };
+    $("copy").onclick = async () => {
+      await navigator.clipboard.writeText(card.suggested_fix);
+      $("copy").textContent = "Copied";
+    };
+  }
+}
+
+$("form").addEventListener("submit", (e) => { e.preventDefault(); run(); });
+
+$("example").onclick = () => {
+  $("name").value = "Dana Lee";
+  $("role").value = "Owner";
+  $("company").value = "Northside Remodeling";
+  $("context").value = "Runs a 14-person remodeling firm in Seattle. Recent public post: \"Lost two jobs this month because our crew schedules got crossed on the Fremont kitchen remodel. Spreadsheets aren't cutting it anymore.\"";
+  $("message_type").value = "cold";
+  $("subject").value = "Quick question";
+  $("text").value = "Hi Dana,\n\nI hope this email finds you well. I came across your profile and was impressed by your work at Northside Remodeling.\n\nWe help companies like yours leverage our cutting-edge AI-powered solution to unlock growth. Our platform streamlines scheduling, and our team has years of experience.\n\nWould you be open to a quick call? Are you the right person to speak to about this? Let me know if this resonates!\n\nBest regards,\nSam";
+};
+</script>
+</body>
+</html>
