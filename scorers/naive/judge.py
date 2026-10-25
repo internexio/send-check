@@ -43,6 +43,12 @@ Never invent facts about the recipient or the sender. Write evidence and
 suggestions in plain language for a small-business owner: never mention
 field names, script internals, or rubric caps.
 
+When "sender" is present, it is the sender's saved profile. End suggested_fix
+with sender.signature exactly as given (no placeholders like [Your Name]). Use
+sender.about for what the business offers and results it can cite; never claim
+anything beyond it. If no sender is given, leave a bracketed placeholder for
+facts only the sender knows.
+
 When "audience" is "segment", the recipient is a group on a send list and the
 same draft goes to every group. Follow the rubric's Segments section: judge
 the draft against this group's observable facts only, name the fact each

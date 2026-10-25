@@ -61,3 +61,30 @@ def test_list_template_merge_fields_are_a_reminder_not_a_cap():
                                 audience="segment")
     assert "disqualified" not in card.notes
     assert "fill the merge fields before sending" in card.notes
+
+
+SENDER = {"name": "Chirag Patankar", "company": "Cascade Self Storage",
+          "signature": "Thanks,\nChirag Patankar\nOwner, Cascade Self Storage"}
+
+
+def test_unsigned_draft_gets_a_reminder():
+    unsigned = NaiveBackend().score(Draft(text="Hi Dana,\nWant a quote Friday?\n\nBest,\nSam"),
+                                    Recipient(), sender=SENDER)
+    signed = NaiveBackend().score(Draft(text="Hi Dana,\nWant a quote Friday?\n\nThanks,\nChirag"),
+                                  Recipient(), sender=SENDER)
+    assert "not signed with your saved signature" in unsigned.notes
+    assert "not signed with your saved signature" not in signed.notes
+
+
+def test_suggested_fix_always_ends_with_the_saved_signature():
+    from scorers.naive.combine import _with_signature
+    fixed = _with_signature("Hi Dana,\nWant a quote Friday?\n\n[Your Name]", SENDER["signature"])
+    assert fixed.endswith(SENDER["signature"])
+    already = "Hi Dana,\nWant a quote?\n\nThanks,\nChirag Patankar\nOwner, Cascade Self Storage"
+    assert _with_signature(already, SENDER["signature"]) == already
+
+
+def test_placeholder_sign_off_is_replaced_not_kept():
+    from scorers.naive.combine import _with_signature
+    fixed = _with_signature("Hi Dana,\nWant a quote Friday?\n\n[Your Name]\n[Your Title]", SENDER["signature"])
+    assert "[Your" not in fixed and fixed.endswith(SENDER["signature"])

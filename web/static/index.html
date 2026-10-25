@@ -103,6 +103,10 @@
              border-right-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;
              vertical-align: -2px; margin-right: 6px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .who { float: right; font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .who button { font-size: 13px; padding: 4px 10px; }
+  .sig-preview { white-space: pre-wrap; font-size: 13px; background: var(--field); border: 1px solid var(--line);
+                 border-radius: 8px; padding: 10px; color: var(--muted); }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -110,22 +114,59 @@
 <header>
   <h1>Send Check</h1>
   <p>One email to many people is many emails. Check how each group will read it before you send.</p>
+  <span class="who" id="who"></span>
 </header>
 <main>
   <form id="form">
     <div class="tabs" role="tablist">
       <button type="button" id="tab-person" class="on">One person</button>
       <button type="button" id="tab-list">A list (segments)</button>
+      <button type="button" id="tab-profile">Your profile</button>
     </div>
 
-    <div class="actions examples">
+    <section class="card" id="profile-card" hidden>
+      <h2>Your profile</h2>
+      <p class="small" style="margin:-6px 0 12px">Saved in this browser only, and used in every check: suggested fixes end with your signature, and Send Check uses only the facts you give here about your business.</p>
+      <div class="row">
+        <div class="field"><label for="p-name">Your name</label><input id="p-name" placeholder="Chirag Patankar" autocomplete="name"></div>
+        <div class="field"><label for="p-title">Title</label><input id="p-title" placeholder="Owner"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="p-company">Company</label><input id="p-company" placeholder="Cascade Self Storage" autocomplete="organization"></div>
+        <div class="field"><label for="p-website">Website</label><input id="p-website" placeholder="cascadestorage.example" inputmode="url"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="p-phone">Phone</label><input id="p-phone" placeholder="(206) 555-0100" autocomplete="tel"></div>
+        <div class="field"><label for="p-email">Email</label><input id="p-email" placeholder="you@company.example" autocomplete="email"></div>
+      </div>
+      <div class="field">
+        <label for="p-signature">Email signature <span class="hint">(exactly as it should appear)</span></label>
+        <textarea id="p-signature" style="min-height:90px" placeholder="Thanks,&#10;Chirag Patankar&#10;Owner, Cascade Self Storage&#10;(206) 555-0100"></textarea>
+        <button type="button" class="link" id="p-build-sig">Build it from my details</button>
+      </div>
+      <div class="field">
+        <label for="p-about">About your business <span class="hint">(what you offer, and results you can honestly cite)</span></label>
+        <textarea id="p-about" placeholder="Climate-controlled units in Fremont and Ballard. 24/7 gate access. Rated 4.8 on Google from 310 reviews."></textarea>
+      </div>
+      <div class="field">
+        <label for="p-samples">Emails you've sent <span class="hint">(2–3, a line with --- between them; used for "sounds like you")</span></label>
+        <textarea id="p-samples" style="min-height:100px"></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" class="primary" id="p-save">Save profile</button>
+        <button type="button" id="p-clear">Clear</button>
+        <span class="small" id="p-status" style="margin:0"></span>
+      </div>
+    </section>
+
+    <div class="actions examples" id="examples-row">
       <span class="hint" style="font-size:13px">Try an example:</span>
       <button type="button" data-example="price">Price increase</button>
       <button type="button" data-example="winback">Win-back</button>
       <button type="button" data-example="cold">Cold email</button>
     </div>
 
-    <section class="card">
+    <section class="card" id="draft-card">
       <h2>1 · Your email</h2>
       <div class="row">
         <div class="field">
@@ -190,18 +231,11 @@
     </section>
 
 
-    <section class="card">
-      <details>
-        <summary>Sounds like you? <span class="hint">(optional)</span></summary>
-        <label for="samples">Paste 2–3 emails you've actually sent <span class="hint">(a line with --- between them)</span></label>
-        <textarea id="samples" style="min-height:120px"></textarea>
-      </details>
-    </section>
-
-    <div class="actions" style="margin-top:16px">
+    <div class="actions" style="margin-top:16px" id="check-actions">
       <button type="submit" class="primary" id="go">Check draft</button>
       <span class="hint" style="font-size:13px" id="go-hint">Checks your email against every group on the list.</span>
     </div>
+    <div class="small" id="voice-hint"></div>
   </form>
 
   <section class="result">
@@ -221,17 +255,68 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const color = (n) => n >= 75 ? "var(--send)" : n >= 45 ? "var(--fix)" : "var(--scrap)";
 
 // ---- mode tabs ----
+let emailMode = "person";
 function setMode(m) {
   mode = m;
+  if (m !== "profile") emailMode = m;
   $("tab-list").classList.toggle("on", m === "list");
   $("tab-person").classList.toggle("on", m === "person");
+  $("tab-profile").classList.toggle("on", m === "profile");
   $("list-card").hidden = m !== "list";
   $("person-card").hidden = m !== "person";
+  $("profile-card").hidden = m !== "profile";
+  ["examples-row", "draft-card", "check-actions", "voice-hint"].forEach((id) => $(id).hidden = m === "profile");
   $("go-hint").textContent = m === "list" ? "Checks your email against every group on the list."
                                           : "Checks your email against this person.";
 }
 $("tab-list").onclick = () => setMode("list");
 $("tab-person").onclick = () => setMode("person");
+$("tab-profile").onclick = () => { fillProfileForm(); setMode("profile"); };
+
+// ---- sender profile (this browser only) ----
+const PROFILE_KEY = "sendcheck.profile.v1";
+const PROFILE_FIELDS = ["name", "title", "company", "website", "phone", "email", "signature", "about", "samples"];
+let profile = {};
+try { profile = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}") || {}; } catch { profile = {}; }
+
+function senderFields() {
+  const { samples, ...sender } = profile;
+  return sender;
+}
+function showWho() {
+  $("who").innerHTML = profile.name
+    ? `Signed as <b>${esc(profile.name)}</b>${profile.company ? ", " + esc(profile.company) : ""} <button type="button" id="who-edit">Edit</button>`
+    : `<button type="button" id="who-edit">Add your profile</button>`;
+  $("who-edit").onclick = () => { fillProfileForm(); setMode("profile"); };
+  const n = splitEmails(profile.samples || "").length;
+  $("voice-hint").innerHTML = n
+    ? `"Sounds like you" compares the draft with the ${n} email${n > 1 ? "s" : ""} saved in your profile.`
+    : `Add a few emails you've sent in <b>Your profile</b> to check the draft sounds like you.`;
+}
+function fillProfileForm() {
+  PROFILE_FIELDS.forEach((k) => $("p-" + k).value = profile[k] || "");
+  $("p-status").textContent = profile.name ? "Saved on this device." : "";
+}
+$("p-build-sig").onclick = () => {
+  const v = (k) => $("p-" + k).value.trim();
+  const role = [v("title"), v("company")].filter(Boolean).join(", ");
+  $("p-signature").value = ["Thanks,", v("name"), role, v("phone"), v("website")].filter(Boolean).join("\n");
+};
+$("p-save").onclick = () => {
+  profile = {};
+  PROFILE_FIELDS.forEach((k) => { const v = $("p-" + k).value.trim(); if (v) profile[k] = v; });
+  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); $("p-status").textContent = "Saved on this device. Used in every check."; }
+  catch { $("p-status").textContent = "Couldn't save in this browser (private mode?). It still applies until you reload."; }
+  showWho();
+  setMode(emailMode);
+};
+$("p-clear").onclick = () => {
+  profile = {};
+  try { localStorage.removeItem(PROFILE_KEY); } catch {}
+  fillProfileForm();
+  $("p-status").textContent = "Cleared from this device.";
+  showWho();
+};
 
 // ---- segment editor ----
 function addSegment(seg = {}) {
@@ -348,9 +433,11 @@ function base() {
   return {
     text: $("text").value, subject: $("subject").value, channel: $("channel").value,
     message_type: $("message_type").value,
-    owner_samples: $("samples").value.split(/^\s*---\s*$/m).map((s) => s.trim()).filter(Boolean),
+    owner_samples: splitEmails(profile.samples || ""),
+    sender: senderFields(),
   };
 }
+const splitEmails = (t) => t.split(/^\s*---\s*$/m).map((s) => s.trim()).filter(Boolean);
 
 async function run(previous = null) {
   const btn = $("go");
@@ -498,6 +585,7 @@ document.querySelectorAll("[data-example]").forEach((b) => b.onclick = () => {
 addSegment();
 addSegment();
 setMode("person");
+showWho();
 $("message_type").value = "cold";
 </script>
 </body>
