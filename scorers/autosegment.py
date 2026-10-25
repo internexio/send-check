@@ -87,6 +87,31 @@ Rules:
   would not change how the draft lands."""
 
 
+def xlsx_to_csv(data: bytes) -> str:
+    """First sheet of an Excel workbook as CSV text."""
+    from openpyxl import load_workbook
+
+    sheet = load_workbook(io.BytesIO(data), read_only=True, data_only=True).worksheets[0]
+    out = io.StringIO()
+    writer = csv.writer(out)
+    for row in sheet.iter_rows(values_only=True):
+        if any(v is not None and str(v).strip() for v in row):
+            writer.writerow([_cell(v) for v in row])
+    return out.getvalue()
+
+
+def _cell(v) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, datetime):
+        return v.date().isoformat()
+    if isinstance(v, date):
+        return v.isoformat()
+    if isinstance(v, float) and v.is_integer():
+        return str(int(v))
+    return str(v)
+
+
 def read_csv(text: str) -> list[dict]:
     rows = list(csv.DictReader(io.StringIO(text.lstrip("﻿"))))
     if len(rows) > MAX_ROWS:

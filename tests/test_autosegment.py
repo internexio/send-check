@@ -35,3 +35,20 @@ def test_rules_assign_rows_to_first_match_and_describe_them():
     assert "unknown columns" in notes[0]
     tenured = next(s for s in segments if s.label == "10+ years")
     assert "10.8 years ago" in tenured.facts and "rate_type: standard" in tenured.facts
+
+
+def test_excel_files_read_like_csv():
+    import io
+    from datetime import datetime
+
+    from openpyxl import Workbook
+
+    from scorers.autosegment import xlsx_to_csv
+
+    wb = Workbook()
+    wb.active.append(["move_in_date", "monthly_rate", "rate_type"])
+    wb.active.append([datetime(2016, 1, 10), 120.0, "standard"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    rows = read_csv(xlsx_to_csv(buf.getvalue()))
+    assert rows == [{"move_in_date": "2016-01-10", "monthly_rate": "120", "rate_type": "standard"}]

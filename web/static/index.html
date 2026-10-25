@@ -61,6 +61,7 @@
   .seg textarea { min-height: 54px; background: var(--card); }
   .seg .why { font-size: 12px; color: var(--muted); margin-top: 6px; }
   .csvbox { border: 1px dashed var(--line); border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+  .csvbox.over { border-color: var(--accent); background: var(--field); }
   .csvrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .filebtn { display: inline-block; margin: 0; font-size: 15px; font-weight: 600; border: 1px solid var(--line);
              border-radius: 8px; padding: 9px 15px; cursor: pointer; background: var(--card); }
@@ -118,13 +119,15 @@
     <section class="card" id="list-card">
       <h2>Who's on the list</h2>
       <p class="small" style="margin:-6px 0 12px">Split the list by facts you already have: how long they've been customers, last visit, plan, payment history.</p>
-      <div class="csvbox">
+      <div class="csvbox" id="csv-drop">
         <div class="csvrow">
-          <label class="filebtn">Upload customer CSV<input type="file" id="csv-file" accept=".csv,text/csv" hidden></label>
-          <button type="button" id="csv-sample">Use sample CSV</button>
+          <label class="filebtn">Upload customer list<input type="file" id="csv-file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label>
+          <button type="button" id="csv-sample">Use sample list</button>
           <button type="button" class="primary" id="csv-go" disabled>Auto-segment</button>
         </div>
-        <div class="small" id="csv-status">Or add segments by hand below. With a CSV, Claude sees only column summaries; names, emails, and phone numbers are never sent.</div>
+        <div class="small">CSV or Excel (.xlsx). Drop a file here, <button type="button" class="link" id="csv-paste-toggle" style="font-size:12px">paste CSV text</button>, or add segments by hand below. Claude sees only column summaries; names, emails, and phone numbers are never sent.</div>
+        <div class="small" id="csv-status" style="font-weight:600"></div>
+        <textarea id="csv-paste" hidden placeholder="Paste CSV here, header row first: customer_id,move_in_date,rate_type,..." style="margin-top:8px;min-height:90px"></textarea>
       </div>
       <div id="segments"></div>
       <button type="button" class="link" id="add-seg">+ Add segment</button>
@@ -230,21 +233,44 @@ function addSegment(seg = {}) {
 $("add-seg").onclick = () => addSegment();
 
 // ---- CSV auto-segmentation ----
-let csvText = "", csvName = "";
-function csvReady(text, name) {
+let csvText = "", xlsxB64 = "", csvName = "";
+function csvReady({ text = "", xlsx = "", name }) {
   csvText = text;
+  xlsxB64 = xlsx;
   csvName = name;
-  const rows = Math.max(0, text.trim().split(/\r?\n/).length - 1);
-  $("csv-status").textContent = `${name}: ${rows} customers loaded. Paste the draft, then press Auto-segment.`;
+  const count = text ? `${Math.max(0, text.trim().split(/\r?\n/).length - 1)} customers` : "Excel file";
+  $("csv-status").textContent = `${name}: ${count} loaded. Paste the draft, then press Auto-segment.`;
   $("csv-go").disabled = false;
 }
-$("csv-file").onchange = async (e) => {
-  const file = e.target.files[0];
-  if (file) csvReady(await file.text(), file.name);
-};
+function toBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
+async function loadFile(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".xls") || name.endsWith(".numbers")) {
+    $("csv-status").textContent = `${file.name}: save it as .xlsx or CSV first (File > Save As or Export).`;
+    return;
+  }
+  if (name.endsWith(".xlsx")) csvReady({ xlsx: toBase64(await file.arrayBuffer()), name: file.name });
+  else csvReady({ text: await file.text(), name: file.name });
+}
+$("csv-file").onchange = (e) => e.target.files[0] && loadFile(e.target.files[0]);
+const drop = $("csv-drop");
+drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", (e) => {
+  e.preventDefault();
+  drop.classList.remove("over");
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+$("csv-paste-toggle").onclick = () => { $("csv-paste").hidden = false; $("csv-paste").focus(); };
+$("csv-paste").oninput = (e) => e.target.value.trim() && csvReady({ text: e.target.value, name: "Pasted list" });
 $("csv-sample").onclick = async () => {
   const res = await fetch("/api/sample_csv");
-  csvReady(await res.text(), "cascade-storage-customers.csv (synthetic)");
+  csvReady({ text: await res.text(), name: "cascade-storage-customers.csv (synthetic)" });
 };
 $("csv-go").onclick = async () => {
   const btn = $("csv-go");
@@ -252,7 +278,7 @@ $("csv-go").onclick = async () => {
   btn.innerHTML = '<span class="spinner"></span>Finding segments…';
   try {
     const res = await fetch("/api/segment_csv", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ csv_text: csvText, text: $("text").value, subject: $("subject").value }) });
+      body: JSON.stringify({ csv_text: csvText, xlsx_base64: xlsxB64, text: $("text").value, subject: $("subject").value }) });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || `server returned ${res.status}`);
     if (!data.segments.length) throw new Error(data.notes || "no segments found");

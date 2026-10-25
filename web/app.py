@@ -4,6 +4,7 @@ Run: uv run uvicorn web.app:app --reload   (or: uv run python -m web.app)
 """
 from __future__ import annotations
 
+import base64
 from dataclasses import asdict
 from pathlib import Path
 from typing import Literal
@@ -12,7 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
 
-from scorers.autosegment import autosegment
+from scorers.autosegment import autosegment, xlsx_to_csv
 from scorers.base import Draft, Recipient
 from scorers.env import load_env
 from scorers.naive.combine import NaiveBackend
@@ -62,7 +63,8 @@ class ListRequest(BaseModel):
 
 
 class CsvRequest(BaseModel):
-    csv_text: str
+    csv_text: str = ""
+    xlsx_base64: str = ""      # an Excel file, read on the server
     text: str
     subject: str = ""
 
@@ -82,7 +84,15 @@ def segment_csv(req: CsvRequest) -> dict:
     if not req.text.strip():
         raise HTTPException(400, "paste the draft first: segments depend on what you are sending")
     try:
-        return asdict(autosegment(req.csv_text, req.text, req.subject))
+        csv_text = req.csv_text
+        if req.xlsx_base64:
+            try:
+                csv_text = xlsx_to_csv(base64.b64decode(req.xlsx_base64))
+            except Exception:
+                raise ValueError("couldn't read that Excel file; try saving it as CSV")
+        if not csv_text.strip():
+            raise ValueError("the file is empty")
+        return asdict(autosegment(csv_text, req.text, req.subject))
     except ValueError as e:
         raise HTTPException(400, str(e))
     except Exception as e:
