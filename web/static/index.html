@@ -4,21 +4,38 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Send Check</title>
+<script>
+  try {
+    const t = localStorage.getItem("sendcheck.theme");
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+  } catch {}
+</script>
 <style>
   :root {
     --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a65; --line: #e3e1da;
     --accent: #b0532c; --accent-ink: #ffffff; --field: #fbfaf7;
     --send: #26683f; --send-bg: #e6f2ea; --fix: #8f5a0c; --fix-bg: #fbf0dc;
     --scrap: #b23b32; --scrap-bg: #f8e3e1; --bar: #ebe9e2;
+    color-scheme: light;
   }
+  /* Theme: "auto" follows the system; data-theme="light" or "dark" forces one */
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #161614; --card: #1f1f1d; --ink: #ecebe6; --muted: #a09e97; --line: #33322e;
       --accent: #e07a4f; --accent-ink: #161614; --field: #191917;
       --send: #6cc58f; --send-bg: #1d2e23; --fix: #e3a94b; --fix-bg: #33291a;
       --scrap: #ec7d73; --scrap-bg: #36201e; --bar: #2c2b28;
+      color-scheme: dark;
     }
   }
+  :root[data-theme="dark"] {
+      --bg: #161614; --card: #1f1f1d; --ink: #ecebe6; --muted: #a09e97; --line: #33322e;
+      --accent: #e07a4f; --accent-ink: #161614; --field: #191917;
+      --send: #6cc58f; --send-bg: #1d2e23; --fix: #e3a94b; --fix-bg: #33291a;
+      --scrap: #ec7d73; --scrap-bg: #36201e; --bar: #2c2b28;
+      color-scheme: dark;
+  }
+  .theme-btn { float: right; margin: 2px 0 0 10px; font-size: 13px; padding: 4px 10px; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink);
          font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -140,6 +157,7 @@
 <header>
   <h1>Send Check</h1>
   <p>One email to many people is many emails. Check how each group will read it before you send.</p>
+  <button type="button" class="theme-btn" id="theme-btn" aria-label="Color theme"></button>
   <span class="who" id="who"></span>
 </header>
 <main>
@@ -299,6 +317,27 @@ function setMode(m) {
 $("tab-list").onclick = () => setMode("list");
 $("tab-person").onclick = () => setMode("person");
 $("tab-profile").onclick = () => { fillProfileForm(); setMode("profile"); };
+
+// ---- color theme: auto (system) -> light -> dark ----
+const THEME_KEY = "sendcheck.theme";
+const THEME_LABEL = { auto: "◐ Auto", light: "☀ Light", dark: "☾ Dark" };
+const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+function currentTheme() { return document.documentElement.dataset.theme || "auto"; }
+function showTheme() {
+  const t = currentTheme();
+  const shown = t === "auto" ? (systemDark.matches ? "dark" : "light") : t;
+  $("theme-btn").textContent = THEME_LABEL[t];
+  $("theme-btn").title = t === "auto" ? `Following your system (${shown}). Click to change.` : "Click to change the theme.";
+}
+$("theme-btn").onclick = () => {
+  const next = { auto: "light", light: "dark", dark: "auto" }[currentTheme()];
+  if (next === "auto") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = next;
+  try { next === "auto" ? localStorage.removeItem(THEME_KEY) : localStorage.setItem(THEME_KEY, next); } catch {}
+  showTheme();
+};
+systemDark.addEventListener("change", showTheme);
+showTheme();
 
 // ---- sender profile (this browser only) ----
 const PROFILE_KEY = "sendcheck.profile.v1";
