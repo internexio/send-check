@@ -273,6 +273,12 @@ $("csv-sample").onclick = async () => {
   csvReady({ text: await res.text(), name: "cascade-storage-customers.csv (synthetic)" });
 };
 $("csv-go").onclick = async () => {
+  if (!$("text").value.trim()) {
+    $("csv-status").textContent = "First write or paste your email in the Message box below (or click an example). The groups depend on what the email says.";
+    $("text").scrollIntoView({ behavior: "smooth", block: "center" });
+    $("text").focus();
+    return;
+  }
   const btn = $("csv-go");
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Finding segments…';
