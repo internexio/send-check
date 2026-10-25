@@ -22,8 +22,12 @@ from scorers.website import WebsiteError, fetch_text
 
 PAGE = Path(__file__).resolve().parent / "static" / "index.html"
 ICON = Path(__file__).resolve().parents[1] / ".claude-plugin" / "icon.png"
-SAMPLE_CSV = (Path(__file__).resolve().parents[1]
-              / "corpus" / "fixtures" / "data" / "cascade-storage-customers.csv")
+DATA = Path(__file__).resolve().parents[1] / "corpus" / "fixtures" / "data"
+# Sample guest and customer lists the page can load by name (fixed list, never a path).
+SAMPLE_CSVS = {
+    "cascade": DATA / "cascade-storage-customers.csv",
+    "saltwind": DATA / "saltwind-tours-guests.csv",
+}
 
 load_env()
 # No public API docs: the page is the only client.
@@ -132,8 +136,11 @@ def favicon_png(request: Request) -> FileResponse:
 
 
 @app.get("/api/sample_csv", response_class=PlainTextResponse)
-def sample_csv() -> str:
-    return SAMPLE_CSV.read_text(encoding="utf-8")
+def sample_csv(name: str = "cascade") -> str:
+    path = SAMPLE_CSVS.get(name)
+    if path is None:
+        raise HTTPException(status_code=404, detail="no such sample list")
+    return path.read_text(encoding="utf-8")
 
 
 @app.post("/api/segment_csv")
