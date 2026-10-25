@@ -12,8 +12,17 @@ every time, so when a draft sits between two bands, pick the lower one.
 ### slop (weight 25): how distinguishable is this from template outreach?
 
 Take `slop.score` from `scripts/check.py` as the score. Then deduct the
-points of any mechanical findings named `em_dash`, `uniform_paragraphs`, or
-`three_bullets`, since those are style tells too.
+points of any mechanical findings named `em_dash`, `uniform_paragraphs`,
+`three_bullets`, `uniform_sentences`, or `no_contractions`, since those are
+style tells too.
+
+**Voice match (only when the owner supplied emails they actually sent).**
+Start from `voice.score` and adjust for word choice the script cannot see:
+phrases the owner never uses, a register more formal or casual than theirs,
+how they phrase an ask. Then the slop score becomes
+`round(0.5 * slop + 0.5 * voice)`. Evidence: each item in
+`voice.differences`, plus any quoted word-choice mismatch. Without samples,
+skip this and say voice was not measured.
 
 Evidence: quote each matched phrase exactly as it appears in the draft,
 strongest first. If the script could not run, find the phrases by reading
@@ -32,6 +41,14 @@ strongest first. If the script could not run, find the phrases by reading
 If `recipient_terms_found` is empty and recipient context was given, the
 score is at most 40. Evidence: quote the line that carries the detail, or the
 line where a detail should have been.
+
+**Over-personalization.** Personal is not the same as personalized. Flag any
+reference to the recipient's private life (family, health, home, personal
+social accounts, travel, religion, politics) or to anything the sender could
+not plausibly know from public, work-related sources. The test: could the
+sender say to the recipient's face how they knew it, without it being
+awkward? If not, personalization is at most 40 and the draft is capped (no
+"send"). Evidence: quote the line and name what makes it intrusive.
 
 ### recipient_fit (weight 30): does the message match what this person responds to?
 
@@ -60,8 +77,9 @@ Start at 100 and deduct the points of every mechanical finding except
 overall = round(0.25 * slop + 0.30 * personalization + 0.30 * recipient_fit + 0.15 * mechanics)
 ```
 
-If `caps` from the script is not empty, overall is at most 74: a capped
-draft cannot get "send" until the capped issue is fixed.
+If `caps` from the script is not empty, or the draft is over-personalized,
+overall is at most 74: a capped draft cannot get "send" until the capped
+issue is fixed.
 
 Verdict, matching `verdict_from_score()` in `scorers/base.py`:
 
@@ -74,6 +92,11 @@ Verdict, matching `verdict_from_score()` in `scorers/base.py`:
 ## The suggested fix
 
 - Keep the owner's voice, facts, and offer. Change only what the evidence flagged.
+  When owner samples were given, match their measured habits: sentence
+  length, contractions, greeting, sign-off, and how they phrase an ask.
+- Mix sentence lengths and use contractions where the owner would.
+- Use only public, work-related details about the recipient. Remove any
+  over-personal reference rather than softening it.
 - Never invent facts: no made-up results, customers, mutual connections, or
   details about the recipient. When a fix needs a detail only the owner knows,
   leave a bracketed placeholder such as `[the project of theirs you liked]`.

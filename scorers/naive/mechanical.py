@@ -32,6 +32,25 @@ STOPWORDS = {
 }
 
 
+CONTRACTION = re.compile(
+    r"\b(\w+n't|\w+'re|\w+'ve|\w+'ll|\w+'d|i'm|(it|that|there|what|let|here|he|she|who)'s)\b")
+UNCONTRACTED = re.compile(
+    r"\b(i am|i have|i will|i would|we are|we have|we will|you are|it is|that is|"
+    r"do not|does not|did not|cannot|will not|would not|is not|are not|let us)\b")
+
+
+def sentences(text: str) -> list[str]:
+    """Body sentences of 3+ words; greeting and sign-off lines drop out."""
+    parts = re.split(r"(?<=[.!?])\s+|\n+", text.strip())
+    return [p for p in parts if len(p.split()) >= 3]
+
+
+def count_contractions(text: str) -> tuple[int, int]:
+    """(contractions, uncontracted forms that could have been contractions)."""
+    lower = text.lower().replace("’", "'")
+    return len(CONTRACTION.findall(lower)), len(UNCONTRACTED.findall(lower))
+
+
 def recipient_terms(context: str, exclude: str = "") -> list[str]:
     """Distinctive words from recipient context (bio, CRM notes, site copy).
 
@@ -93,6 +112,18 @@ def check(text: str, message_type: str = "cold",
     if len(paras) >= 3 and statistics.pstdev(paras) / statistics.mean(paras) < 0.15:
         add("uniform_paragraphs", 5,
             f"{len(paras)} paragraphs of nearly the same length ({paras}), a common AI tell")
+
+    # Uniform sentence length: people mix short and long sentences
+    lengths = [len(s.split()) for s in sentences(norm)]
+    if len(lengths) >= 4 and statistics.pstdev(lengths) / statistics.mean(lengths) < 0.25:
+        add("uniform_sentences", 5,
+            f"{len(lengths)} sentences of nearly the same length ({lengths}); people vary theirs")
+
+    # No contractions: "I am writing to" reads stiffer than "I'm writing"
+    n_contracted, n_uncontracted = count_contractions(norm)
+    if n_uncontracted >= 2 and n_contracted == 0:
+        add("no_contractions", 5,
+            f"{n_uncontracted} spots like \"I am\" or \"do not\" and no contractions; reads formal")
 
     # Exactly three parallel bullets
     bullet = re.compile(r"^\s*([-*•]|\d+[.)])\s+")

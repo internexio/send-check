@@ -35,8 +35,16 @@ measure and report. The owner decides.
    fetch LinkedIn URLs, since LinkedIn blocks automated access; ask the user to
    paste the profile text instead. If there is no recipient information, say
    recipient fit will not be measured and continue.
+   Public, work-related posts the user pastes (what the recipient has said
+   about their work, company, or market) are the best context there is. Use
+   connected enrichment tools (Apollo, Clay, HubSpot) when available. Never
+   collect or use details about the recipient's private life.
 3. **The message type:** cold, follow_up, warm, or post_meeting. Infer it from
    the draft; default to cold.
+4. **The owner's voice (optional):** 2 or 3 emails the owner actually sent.
+   If a voice profile from outreach-composer exists, use its samples. Offer
+   this once: "Paste 2 or 3 emails you've sent and I'll check this sounds like
+   you." Never block on it.
 
 ## Step 2: Run the deterministic checks
 
@@ -46,13 +54,16 @@ Run `scripts/check.py` from this skill's directory, passing JSON on stdin:
 python3 scripts/check.py <<'EOF'
 {"text": "<draft body>", "subject": "<subject>", "message_type": "cold",
  "recipient_name": "<name>", "recipient_company": "<company>",
- "recipient_context": "<everything known about the recipient>"}
+ "recipient_context": "<everything known about the recipient>",
+ "owner_samples": ["<sent email 1>", "<sent email 2>"]}
 EOF
 ```
 
-It returns generic-phrase matches, mechanical findings (length, you/I
-balance, ask count, AI style tells), which recipient details appear in the
-draft, and `caps`: issues that block a "send" verdict.
+Leave out `owner_samples` when there are none. It returns generic-phrase
+matches, mechanical findings (length, you/I balance, ask count, AI style
+tells such as uniform sentence length and missing contractions), which
+recipient details appear in the draft, `caps` (issues that block a "send"
+verdict), and, with samples, a `voice` comparison against the owner's habits.
 
 If Python is not available, apply the same checks by reading
 `corpus/generic_openers.txt` at the plugin root and the rules in
@@ -74,7 +85,8 @@ For "scrap", explain what is missing instead of patching.
 ## Output format
 
 1. One line: **Verdict: SEND | FIX | SCRAP: {score}/100** (naive backend)
-2. A table: dimension, score, strongest piece of evidence
+2. A table: dimension, score, strongest piece of evidence. When voice was
+   measured, add a "sounds like you" row with its score and top difference
 3. For "fix": the suggested fix as a quoted block labeled **Suggested fix
    (approve before use)**, followed by its own score, e.g. "Fix scores 82/100: send"
 4. One line on what changed and why
@@ -91,6 +103,10 @@ fixes only for the drafts the user picks.
 - Never send, schedule, queue, or post anything.
 - Never apply the suggested fix silently. The user approves; you measure.
 - Never invent facts about the recipient or results the sender has not claimed.
+- Flag over-personal references (private life, things the sender could not
+  plausibly know) as defined in the rubric. Personal is not personalized.
+- The goal is an email that sounds like the owner, who approves every word.
+  Do not describe this as making text undetectable as AI.
 - Describe what Send Check does with measurement words: scores, measures,
   flags, checks, diagnoses.
 

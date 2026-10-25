@@ -4,9 +4,11 @@ Usage: pipe a JSON object on stdin, get JSON on stdout.
 
     {"text": "...", "subject": "...", "message_type": "cold",
      "recipient_name": "Dana Lee", "recipient_company": "Northside Remodeling",
-     "recipient_context": "bio, CRM notes, site copy"}
+     "recipient_context": "bio, CRM notes, site copy",
+     "owner_samples": ["an email the owner actually sent", "..."]}
 
 message_type is one of cold, follow_up, warm, post_meeting (default cold).
+owner_samples is optional; with it, the output includes a voice match.
 Standard library only. Runs from the plugin root layout:
 skills/send-check/scripts/check.py -> scorers/naive/.
 """
@@ -22,7 +24,7 @@ sys.path.insert(0, str(ROOT))
 
 def main() -> None:
     try:
-        from scorers.naive import mechanical, slop
+        from scorers.naive import mechanical, slop, voice
     except ImportError as e:
         print(json.dumps({"error": f"scorers not found next to the skill: {e}"}))
         return
@@ -52,7 +54,11 @@ def main() -> None:
         opener = next(m["phrase"] for m in sl["matches"] if m["in_opener"] and m["words"] >= 3)
         caps.append(f'opens with a generic phrase: "{opener}"')
 
-    print(json.dumps({"mechanical": mech, "slop": sl, "caps": caps}, indent=2))
+    out = {"mechanical": mech, "slop": sl, "caps": caps}
+    samples = req.get("owner_samples") or []
+    if samples:
+        out["voice"] = voice.compare(text, samples)
+    print(json.dumps(out, indent=2))
 
 
 if __name__ == "__main__":

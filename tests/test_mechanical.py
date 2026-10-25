@@ -53,3 +53,23 @@ def test_company_name_alone_is_not_personalization():
 
 def test_recipient_terms_skip_generic_words():
     assert mechanical.recipient_terms("Business owner, team of 12, bakery") == ["owner", "bakery"]
+
+
+def test_uniform_sentence_length_flagged():
+    even = ("We build tools for busy teams. They save hours every single week. "
+            "Our clients love the simple setup. Can we show you a demo?")
+    assert "uniform_sentences" in checks(mechanical.check(even))
+
+
+def test_varied_sentence_length_passes():
+    varied = ("Saw the Fremont job. Scheduling two crews across three sites while "
+              "the inspector keeps moving dates is brutal, and we fixed exactly that "
+              "for a shop your size last spring. Worth ten minutes?")
+    assert "uniform_sentences" not in checks(mechanical.check(varied))
+
+
+def test_no_contractions_flagged():
+    stiff = "I am writing because we are a good fit. It is quick. Do you want a call?"
+    assert "no_contractions" in checks(mechanical.check(stiff))
+    assert "no_contractions" not in checks(mechanical.check(
+        "I'm writing because we're a good fit. It is quick. Want a call?"))
