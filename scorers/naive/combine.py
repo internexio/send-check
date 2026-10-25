@@ -17,6 +17,12 @@ STYLE_CHECKS = {"em_dash", "uniform_paragraphs", "three_bullets",
 MAX_IF_CAPPED = 74
 MISMATCH_FIT = 30           # recipient_fit below this is the rubric's "mismatched" band
 MAX_IF_MISMATCHED = 44
+MAX_IF_DISQUALIFIED = 30    # docs/humanization-rubric.md caps at 12 of 28
+# Stakes tiers from docs/humanization-rubric.md, Part 1
+TIER = {"cold": "cold", "follow_up": "cold"}                 # everything else: client
+SEND_LINE = {"cold": 82, "client": 75}                       # 23 of 28, 21 of 28
+TEMPLATE_TELL_ALLOWANCE = {"cold": 1, "client": 2}
+STRUCTURE_TELLS = {"uniform_paragraphs", "uniform_sentences", "three_bullets"}
 
 
 class NaiveBackend:
@@ -42,6 +48,9 @@ def _score(draft: Draft, recipient: Recipient, message_type: str,
         # One draft goes to every segment, so it cannot echo each segment's
         # facts word for word; the judge decides whether it fits the facts.
         mech["findings"] = [f for f in mech["findings"] if f["check"] != "personalization"]
+    disqualifying, reminders = mechanical.disqualifiers(
+        draft.text, draft.subject, message_type,
+        merge_fields_ok=audience == "segment" or message_type == "customer")
     sl = slop.check(draft.text)
     vc = voice.compare(draft.text, owner_samples) if owner_samples else None
 
@@ -61,7 +70,8 @@ def _score(draft: Draft, recipient: Recipient, message_type: str,
                 "audience": audience,
                 "recipient": {"name": recipient.name, "role": recipient.role,
                               "company": recipient.company, "context": recipient.context},
-                "script_results": {"mechanical": mech, "slop": sl, "voice": vc, "caps": caps},
+                "script_results": {"mechanical": mech, "slop": sl, "voice": vc, "caps": caps,
+                                   "disqualifying": disqualifying},
                 "owner_samples": owner_samples,
             })
         except Exception as e:
@@ -120,6 +130,27 @@ def _score(draft: Draft, recipient: Recipient, message_type: str,
     if judgment and recipient_fit.score < MISMATCH_FIT:
         overall = min(overall, MAX_IF_MISMATCHED)
         notes.append("wrong for this reader: the offer or framing does not fit their facts")
+
+    # Humanization rubric: disqualifying tells, template-tell allowance, pass line
+    tier = TIER.get(message_type, "client")
+    if judgment and audience == "person":
+        disqualifying += [{"id": t.id, "tell": t.reason, "span": t.span}
+                          for t in judgment.disqualifying]
+    if disqualifying:
+        overall = min(overall, MAX_IF_DISQUALIFIED)
+        notes.append("disqualified: " + "; ".join(
+            f'{d["id"]} {d["tell"]}' + (f' ("{d["span"]}")' if d["span"] else "")
+            for d in disqualifying))
+    template_tells = (sum(m["words"] >= 2 for m in sl["matches"])
+                      + sum(f["check"] in STRUCTURE_TELLS for f in mech["findings"]))
+    if template_tells > TEMPLATE_TELL_ALLOWANCE[tier]:
+        overall = min(overall, MAX_IF_CAPPED)
+        notes.append(f"blocks send: {template_tells} template tells; a {tier} message "
+                     f"allows {TEMPLATE_TELL_ALLOWANCE[tier]}")
+    if verdict_from_score(overall) == "send" and overall < SEND_LINE[tier]:
+        overall = min(overall, MAX_IF_CAPPED)
+        notes.append(f"blocks send: cold outreach needs {SEND_LINE[tier]}+ to send")
+    notes += reminders
 
     verdict = verdict_from_score(overall)
     fix = judgment.suggested_fix if judgment and verdict == "fix" else ""

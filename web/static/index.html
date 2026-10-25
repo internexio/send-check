@@ -383,7 +383,7 @@ const dimHtml = (d, labels) => `<div class="dim">
     ${d.suggestion ? `<div class="tip">→ ${esc(d.suggestion)}</div>` : ""}
   </div>`;
 const notesHtml = (notes) => notes.length ? `<ul class="notes">${notes.map((n) =>
-    `<li class="${n.startsWith("blocks send") ? "" : "info"}">${esc(n)}</li>`).join("")}</ul>` : "";
+    `<li class="${/^(blocks send|disqualified|wrong for this reader)/.test(n) ? "" : "info"}">${esc(n)}</li>`).join("")}</ul>` : "";
 const splitNotes = (card) => card.notes ? card.notes.split(" | ") : [];
 
 function renderList(data) {
