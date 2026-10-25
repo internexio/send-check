@@ -208,6 +208,7 @@
 
     <div class="actions examples" id="examples-row">
       <span class="hint" style="font-size:13px">Try an example:</span>
+      <button type="button" data-example="saltwind">Apology</button>
       <button type="button" data-example="price">Price increase</button>
       <button type="button" data-example="winback">Win-back</button>
       <button type="button" data-example="cold">Cold email</button>
@@ -641,8 +642,21 @@ $("form").addEventListener("submit", (e) => { e.preventDefault(); run(); });
 
 // ---- examples (fictional businesses from corpus/fixtures) ----
 const EXAMPLES = {
+  saltwind: {
+    mode: "list", type: "customer", subject: "An apology from all of us at Saltwind",
+    csv: { name: "saltwind", label: "saltwind-tours-guests.csv (synthetic)" },
+    text: "Hi there!\n\nYou may have seen some recent reviews mentioning problems with our tours this summer. We want you to know we hear you, and we're truly sorry. We've made some changes to our transportation partners to make sure it never happens again.\n\nAs a thank-you for your patience, anyone who had a less-than-perfect experience with us can enjoy 20% off their next adventure. Just reply to this email!\n\nWarmly,\nThe Saltwind Team",
+    segments: [
+      { label: "Stranded at the ferry", size: 31, facts: "Paid for a tour on Aug 9 or Aug 16, 2026 and were left at the ferry terminal when the pickup shuttle did not show; the tour did not run for them" },
+      { label: "2027 trip booked", size: 58, facts: "Already booked a 2027 trip and paid a deposit ($150 to $200); no problems on file" },
+      { label: "Repeat guests", size: 140, facts: "3 or more trips, most recent trip between 2024 and 2026; no shuttle problem on file" },
+      { label: "One-time, 2019 to 2023", size: 171, facts: "Took one trip between 2019 and 2023 and have not booked since; no contact in years" },
+      { label: "Recent one-trip guests", size: 120, facts: "One or two trips, most recent in 2024 to 2026; no shuttle problem on file, nothing booked ahead" },
+    ],
+  },
   price: {
     mode: "list", type: "customer", subject: "Important update about your storage rate",
+    csv: { name: "cascade", label: "cascade-storage-customers.csv (synthetic)" },
     text: "Hi,\n\nDue to rising operating costs, including insurance, utilities, and property taxes, we will be increasing rates by 12% effective December 1, 2026.\n\nWe know price increases are never welcome, but our costs have gone up significantly and we can no longer absorb them.\n\nThank you for your understanding.\n\nCascade Self Storage Management",
     segments: [
       { label: "Month-to-month renters", size: 140, facts: "Renting under 6 months, month-to-month, standard rate, no prior rate changes" },
@@ -668,7 +682,7 @@ const EXAMPLES = {
   },
 };
 
-document.querySelectorAll("[data-example]").forEach((b) => b.onclick = () => {
+document.querySelectorAll("[data-example]").forEach((b) => b.onclick = async () => {
   const ex = EXAMPLES[b.dataset.example];
   setMode(ex.mode);
   $("message_type").value = ex.type;
@@ -679,6 +693,13 @@ document.querySelectorAll("[data-example]").forEach((b) => b.onclick = () => {
     ex.segments.forEach(addSegment);
   } else {
     ["name", "role", "company", "context"].forEach((k) => $(k).value = ex[k]);
+  }
+  // Load the example's own guest or customer list, so Auto-segment works right away.
+  if (ex.csv) {
+    try {
+      const res = await fetch(`/api/sample_csv?name=${ex.csv.name}`);
+      if (res.ok) csvReady({ text: await res.text(), name: ex.csv.label });
+    } catch { /* the segments above still work without the list */ }
   }
 });
 
