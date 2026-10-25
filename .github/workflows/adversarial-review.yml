@@ -9,6 +9,7 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
+  id-token: write
 
 jobs:
   tests:
@@ -28,6 +29,7 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             You are the adversarial reviewer for Send Check, a 9-hour hackathon
             build. Review this PR's diff with three lenses and post findings as
