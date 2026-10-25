@@ -18,6 +18,7 @@ from scorers.base import Draft, Recipient
 from scorers.env import load_env
 from scorers.naive.combine import NaiveBackend
 from scorers.segments import Segment, score_segments
+from scorers.website import WebsiteError, fetch_text
 
 PAGE = Path(__file__).resolve().parent / "static" / "index.html"
 SAMPLE_CSV = (Path(__file__).resolve().parents[1]
@@ -33,6 +34,7 @@ class RecipientIn(BaseModel):
     role: str = ""
     company: str = ""
     context: str = ""
+    website: str = ""          # public company site, read on the server
 
 
 MessageType = Literal["cold", "follow_up", "warm", "post_meeting", "customer"]
@@ -99,14 +101,40 @@ def segment_csv(req: CsvRequest) -> dict:
         raise HTTPException(502, f"could not propose segments: {e}")
 
 
+class SiteRequest(BaseModel):
+    url: str
+
+
+@app.post("/api/fetch_site")
+def fetch_site(req: SiteRequest) -> dict:
+    try:
+        page = fetch_text(req.url)
+    except WebsiteError as e:
+        raise HTTPException(400, str(e))
+    return {"url": page["url"], "title": page["title"], "chars": len(page["text"]),
+            "preview": page["text"][:300]}
+
+
 @app.post("/api/score")
 def score(req: ScoreRequest) -> dict:
+    r = req.recipient
+    context, site_note = r.context, ""
+    if r.website.strip():
+        try:
+            page = fetch_text(r.website)
+            context = (f"{context}\n\nFrom their company website ({page['url']}, "
+                       f"\"{page['title']}\"): {page['text']}").strip()
+        except WebsiteError as e:
+            site_note = f"company website not used: {e}"
     card = backend.score(
         Draft(text=req.text, channel=req.channel, subject=req.subject),
-        Recipient(**req.recipient.model_dump()),
+        Recipient(name=r.name, role=r.role, company=r.company, context=context,
+                  source_url=r.website.strip()),
         message_type=req.message_type,
         owner_samples=[s for s in req.owner_samples if s.strip()],
     )
+    if site_note:
+        card.notes = " | ".join(n for n in (site_note, card.notes) if n)
     return asdict(card)
 
 

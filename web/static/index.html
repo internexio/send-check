@@ -176,6 +176,14 @@
       </div>
       <div class="field"><label for="company">Company</label><input id="company" placeholder="Northside Remodeling"></div>
       <div class="field">
+        <label for="website">Company website <span class="hint">(optional, public business site only)</span></label>
+        <div class="csvrow" style="flex-wrap:nowrap">
+          <input id="website" placeholder="northsideremodeling.com" inputmode="url">
+          <button type="button" id="site-read" style="white-space:nowrap">Read site</button>
+        </div>
+        <div class="small" id="site-status">Send Check reads the page when you check the draft. Social profiles aren't read: paste what you need below.</div>
+      </div>
+      <div class="field">
         <label for="context">What you know about them <span class="hint">(public work posts, bio, CRM notes)</span></label>
         <textarea id="context" placeholder="Work-related only."></textarea>
       </div>
@@ -240,6 +248,27 @@ function addSegment(seg = {}) {
   $("segments").appendChild(div);
 }
 $("add-seg").onclick = () => addSegment();
+
+// ---- company website ----
+$("site-read").onclick = async () => {
+  const url = $("website").value.trim();
+  if (!url) { $("site-status").textContent = "Enter the company's website first."; return; }
+  const btn = $("site-read");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Reading…';
+  try {
+    const res = await fetch("/api/fetch_site", { method: "POST", headers: { "Content-Type": "application/json" },
+                                                 body: JSON.stringify({ url }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `server returned ${res.status}`);
+    $("site-status").textContent = `Read "${data.title || data.url}" (${data.chars.toLocaleString()} characters): ${data.preview}…`;
+  } catch (e) {
+    $("site-status").textContent = `Couldn't read it: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Read site";
+  }
+};
 
 // ---- CSV auto-segmentation ----
 let csvText = "", xlsxB64 = "", csvName = "";
@@ -331,8 +360,8 @@ async function run(previous = null) {
     const listMode = mode === "list";
     if (listMode && !segments().length) throw new Error("add at least one segment");
     const body = listMode ? { ...base(), segments: segments() }
-      : { ...base(), recipient: { name: $("name").value, role: $("role").value,
-                                  company: $("company").value, context: $("context").value } };
+      : { ...base(), recipient: { name: $("name").value, role: $("role").value, company: $("company").value,
+                                  context: $("context").value, website: $("website").value } };
     const res = await fetch(listMode ? "/api/score_list" : "/api/score", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!res.ok) throw new Error(`server returned ${res.status}`);
