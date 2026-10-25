@@ -32,11 +32,11 @@ Language rule for all copy in this repo (README, SKILL.md, web UI, pitch): Send 
 
 | Seat | Owner | Deliverable |
 |---|---|---|
-| Skill + architecture | TBD | `skills/send-check/SKILL.md`, gateway glue |
-| Scoring pipeline | TBD | `scorers/naive/`, judge rubric, tests |
-| Web + gateway | TBD | `web/`, paste-box flow |
-| Corpus + story | TBD | `corpus/`, demo narration, pitch |
-| API adapter + pitch | David | `scorers/semalytics/`, 90-sec script, final pitch |
+| Skill + architecture | David | `skills/send-check/SKILL.md`, gateway glue (skill wiring) |
+| Scoring pipeline | Chirag | `scorers/naive/` (mechanical, slop, judge), tests |
+| Web + gateway | Chirag | `web/`, paste-box flow |
+| Corpus + story | Karen | `corpus/`, `docs/demo-script.md`, demo video, presents the problem section |
+| API adapter + pitch | David | `scorers/semalytics/`, PR merges, pitch close |
 
 ---
 

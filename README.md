@@ -7,6 +7,14 @@ Send Check is an open-source quality gate for AI-drafted outreach. Before a cold
 > "Preventing AI-slop is critical because it makes you look like an amateur. I have not embraced full automation of many tasks because I don't trust or don't like the output."
 > — small business owner, WA Small Business AI Survey, Oct 2026
 
+## Why this exists when slop checkers exist
+
+Cursor ships unslop, a rewrite skill. Anthropic's outreach-composer runs a slop self-test, a checklist the writer applies to itself. Lavender scores email structure. Each makes the writer its own editor, or checks style without the reader.
+
+Send Check is the independent instrument: any draft from any source, measured against the actual recipient, returning a verdict you can gate on and a score log you can learn from.
+
+The free tier is the instrument, a recipient-aware judge, the gate, and the log. The SEMalytics backend upgrades the judge to validated frameworks.
+
 ## What it does
 
 1. Takes a draft + recipient context (a LinkedIn URL, a website, CRM notes)
@@ -23,7 +31,7 @@ Send Check is an open-source quality gate for AI-drafted outreach. Before a cold
 
 | Backend | What it measures | Requires |
 |---|---|---|
-| `naive` (default, built-in) | Generic-phrase detection, mechanical checks, structured Claude-as-judge rubric | Nothing. Works out of the box |
+| `naive` (default, built-in) | Generic-phrase detection (includes the slop rules Anthropic and Cursor each wrote for their own tools, attributed in `corpus/ATTRIBUTION.md`), mechanical checks, structured Claude-as-judge rubric | Nothing. Works out of the box |
 | `semalytics` | Audience-fit measurement against peer-reviewed personality research | `SENDCHECK_SEMALYTICS_KEY` |
 
 The default backend asks "is this good outreach?" The SEMalytics backend measures "does this fit *this person*, reproducibly, against validated frameworks" — and catches mismatches a generic judge can't see.
