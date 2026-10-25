@@ -59,6 +59,11 @@
   .seg-head { display: grid; grid-template-columns: 1fr 110px 32px; gap: 8px; margin-bottom: 8px; }
   .seg-head button { padding: 0; font-size: 18px; line-height: 1; color: var(--muted); }
   .seg textarea { min-height: 54px; background: var(--card); }
+  .seg .why { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .csvbox { border: 1px dashed var(--line); border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+  .csvrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filebtn { display: inline-block; margin: 0; font-size: 15px; font-weight: 600; border: 1px solid var(--line);
+             border-radius: 8px; padding: 9px 15px; cursor: pointer; background: var(--card); }
   .seg input { background: var(--card); }
   .result { position: sticky; top: 16px; }
   .empty { color: var(--muted); text-align: center; padding: 48px 12px; }
@@ -113,6 +118,14 @@
     <section class="card" id="list-card">
       <h2>Who's on the list</h2>
       <p class="small" style="margin:-6px 0 12px">Split the list by facts you already have: how long they've been customers, last visit, plan, payment history.</p>
+      <div class="csvbox">
+        <div class="csvrow">
+          <label class="filebtn">Upload customer CSV<input type="file" id="csv-file" accept=".csv,text/csv" hidden></label>
+          <button type="button" id="csv-sample">Use sample CSV</button>
+          <button type="button" class="primary" id="csv-go" disabled>Auto-segment</button>
+        </div>
+        <div class="small" id="csv-status">Or add segments by hand below. With a CSV, Claude sees only column summaries; names, emails, and phone numbers are never sent.</div>
+      </div>
       <div id="segments"></div>
       <button type="button" class="link" id="add-seg">+ Add segment</button>
     </section>
@@ -209,11 +222,51 @@ function addSegment(seg = {}) {
       <input class="s-size" type="number" min="0" placeholder="How many" value="${seg.size ?? ""}">
       <button type="button" title="Remove segment">×</button>
     </div>
-    <textarea class="s-facts" placeholder="Facts you have: tenure, last visit, plan, what they pay, payment history, past agreements">${esc(seg.facts)}</textarea>`;
+    <textarea class="s-facts" placeholder="Facts you have: tenure, last visit, plan, what they pay, payment history, past agreements">${esc(seg.facts)}</textarea>
+    ${seg.why ? `<div class="why">Why this group: ${esc(seg.why)}</div>` : ""}`;
   div.querySelector("button").onclick = () => div.remove();
   $("segments").appendChild(div);
 }
 $("add-seg").onclick = () => addSegment();
+
+// ---- CSV auto-segmentation ----
+let csvText = "", csvName = "";
+function csvReady(text, name) {
+  csvText = text;
+  csvName = name;
+  const rows = Math.max(0, text.trim().split(/\r?\n/).length - 1);
+  $("csv-status").textContent = `${name}: ${rows} customers loaded. Paste the draft, then press Auto-segment.`;
+  $("csv-go").disabled = false;
+}
+$("csv-file").onchange = async (e) => {
+  const file = e.target.files[0];
+  if (file) csvReady(await file.text(), file.name);
+};
+$("csv-sample").onclick = async () => {
+  const res = await fetch("/api/sample_csv");
+  csvReady(await res.text(), "cascade-storage-customers.csv (synthetic)");
+};
+$("csv-go").onclick = async () => {
+  const btn = $("csv-go");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Finding segments…';
+  try {
+    const res = await fetch("/api/segment_csv", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ csv_text: csvText, text: $("text").value, subject: $("subject").value }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `server returned ${res.status}`);
+    if (!data.segments.length) throw new Error(data.notes || "no segments found");
+    $("segments").innerHTML = "";
+    data.segments.forEach(addSegment);
+    const skipped = data.columns_skipped.length ? ` Kept private: ${data.columns_skipped.join(", ")}.` : "";
+    $("csv-status").textContent = `${data.segments.length} segments from ${data.rows} customers in ${csvName}. Edit them below if needed.${skipped}`;
+  } catch (e) {
+    $("csv-status").textContent = `Couldn't segment the CSV: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Auto-segment";
+  }
+};
 const segments = () => [...document.querySelectorAll(".seg")].map((d) => ({
   label: d.querySelector(".s-label").value.trim(),
   size: parseInt(d.querySelector(".s-size").value || "0", 10),

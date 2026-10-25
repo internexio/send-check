@@ -8,16 +8,19 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
 
+from scorers.autosegment import autosegment
 from scorers.base import Draft, Recipient
 from scorers.env import load_env
 from scorers.naive.combine import NaiveBackend
 from scorers.segments import Segment, score_segments
 
 PAGE = Path(__file__).resolve().parent / "static" / "index.html"
+SAMPLE_CSV = (Path(__file__).resolve().parents[1]
+              / "corpus" / "fixtures" / "data" / "cascade-storage-customers.csv")
 
 load_env()
 app = FastAPI(title="Send Check")
@@ -58,9 +61,32 @@ class ListRequest(BaseModel):
     owner_samples: list[str] = []
 
 
+class CsvRequest(BaseModel):
+    csv_text: str
+    text: str
+    subject: str = ""
+
+
 @app.get("/", response_class=HTMLResponse)
 def page() -> str:
     return PAGE.read_text(encoding="utf-8")
+
+
+@app.get("/api/sample_csv", response_class=PlainTextResponse)
+def sample_csv() -> str:
+    return SAMPLE_CSV.read_text(encoding="utf-8")
+
+
+@app.post("/api/segment_csv")
+def segment_csv(req: CsvRequest) -> dict:
+    if not req.text.strip():
+        raise HTTPException(400, "paste the draft first: segments depend on what you are sending")
+    try:
+        return asdict(autosegment(req.csv_text, req.text, req.subject))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"could not propose segments: {e}")
 
 
 @app.post("/api/score")

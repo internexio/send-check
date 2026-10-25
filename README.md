@@ -25,7 +25,7 @@ The free tier is the instrument, a recipient-aware judge, the gate, and the log.
 ## Use it two ways
 
 - **As a Claude plugin** — runs on its own whenever Claude drafts outreach, or on request ("should I send this?"), in the style of the official [Claude for Small Business plugin](https://github.com/anthropics/knowledge-work-plugins)
-- **As a web page** — fill in who it's for and the draft, get a verdict, evidence, and a suggested fix you can approve and re-score
+- **As a web page** — paste the draft and either upload a customer CSV (Send Check proposes the segments) or add segments by hand; get a verdict per segment with the fact behind each finding and a version for each group. A one-person mode scores single outreach messages. With a CSV, only column summaries reach Claude: names, emails, phone numbers, IDs, and free-text columns stay on the server
 
 ## Install the plugin
 
