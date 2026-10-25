@@ -7,8 +7,8 @@
 <style>
   :root {
     --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a65; --line: #e3e1da;
-    --accent: #c4623a; --accent-ink: #ffffff; --field: #fbfaf7;
-    --send: #2f7d4f; --send-bg: #e6f2ea; --fix: #a86a12; --fix-bg: #fbf0dc;
+    --accent: #b0532c; --accent-ink: #ffffff; --field: #fbfaf7;
+    --send: #26683f; --send-bg: #e6f2ea; --fix: #8f5a0c; --fix-bg: #fbf0dc;
     --scrap: #b23b32; --scrap-bg: #f8e3e1; --bar: #ebe9e2;
   }
   @media (prefers-color-scheme: dark) {
@@ -110,6 +110,15 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .who { float: right; font-size: 13px; color: var(--muted); margin-top: 6px; }
   .who button { font-size: 13px; padding: 4px 10px; }
+  .offline { margin: 12px 0 0; padding: 10px 12px; font-size: 13px; border-radius: 8px;
+             background: var(--field); border: 1px dashed var(--fix); color: var(--ink); }
+  .offline b { color: var(--fix); }
+  @media (max-width: 520px) {
+    header p { display: block; margin: 4px 0 0; }
+    .who { float: none; display: block; margin-top: 10px; }
+    .tabs { display: flex; width: 100%; }
+    .tabs button { flex: 1; white-space: nowrap; padding: 7px 4px; font-size: 13px; }
+  }
   .sig-preview { white-space: pre-wrap; font-size: 13px; background: var(--field); border: 1px solid var(--line);
                  border-radius: 8px; padding: 10px; color: var(--muted); }
   .reason { margin-top: 10px; padding: 12px 14px; font-size: 16px; font-weight: 650; line-height: 1.35;
@@ -189,7 +198,7 @@
         <div class="field">
           <label for="message_type">Message type</label>
           <select id="message_type">
-            <option value="customer">To customers (update, offer, reminder)</option>
+            <option value="customer">To my customers</option>
             <option value="cold">Cold first touch</option>
             <option value="follow_up">Follow-up</option>
             <option value="warm">Warm / referral</option>
@@ -491,6 +500,11 @@ async function run(previous = null) {
 const REASON_LABEL = { send: "Why it's ready", fix: "Why it needs a fix", scrap: "Why it's a scrap" };
 const ISSUE = /^(blocks send|disqualified|wrong for this reader)/;
 
+// Shown when the Claude judge didn't run, so identical or estimated scores don't read as a bug.
+const JUDGE_OFF = /no Claude API key|judge unavailable|judge turned off/;
+const offlineHtml = (cards) => cards.some((c) => JUDGE_OFF.test(c.notes || ""))
+  ? `<div class="offline"><b>Judge offline.</b> Personalization and fit are estimates, not measured. These scores come from the script checks only.</div>` : "";
+
 function parts(card) {
   const notes = card.notes ? card.notes.split(" | ") : [];
   const pick = (prefix) => (notes.find((n) => n.startsWith(prefix)) || "").slice(prefix.length);
@@ -523,6 +537,7 @@ function renderPerson(card, previous) {
   const delta = previous !== null ? `<span class="delta">was ${previous}/100</span>` : "";
   let html = `<div class="verdict ${card.verdict}">
       <span class="badge">${card.verdict.toUpperCase()}</span><span><b>${card.score}</b>/100</span>${delta}</div>`;
+  html += offlineHtml([card]);
   html += reasonHtml(card.verdict, p.reason);
   if (card.verdict === "scrap") html += needsHtml(p.needs);
   if (card.suggested_fix) {
@@ -552,6 +567,7 @@ function renderList(data) {
   let html = `<div class="verdict ${data.verdict}">
       <span class="badge">${data.verdict.toUpperCase()}</span><span><b>${data.score}</b>/100</span>
       <span class="summary">${esc(data.summary)}</span></div>`;
+  html += offlineHtml(results.map((r) => r.scorecard));
   html += results.map((r, i) => {
     const c = r.scorecard;
     const p = parts(c);
