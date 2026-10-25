@@ -62,6 +62,8 @@
   .seg .why { font-size: 12px; color: var(--muted); margin-top: 6px; }
   .csvbox { border: 1px dashed var(--line); border-radius: 10px; padding: 12px; margin-bottom: 14px; }
   .csvbox.over { border-color: var(--accent); background: var(--field); }
+  .examples { margin-bottom: 14px; }
+  .examples button { padding: 6px 12px; font-size: 14px; }
   .csvrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .filebtn { display: inline-block; margin: 0; font-size: 15px; font-weight: 600; border: 1px solid var(--line);
              border-radius: 8px; padding: 9px 15px; cursor: pointer; background: var(--card); }
@@ -116,38 +118,15 @@
       <button type="button" id="tab-person">One person</button>
     </div>
 
-    <section class="card" id="list-card">
-      <h2>Who's on the list</h2>
-      <p class="small" style="margin:-6px 0 12px">Split the list by facts you already have: how long they've been customers, last visit, plan, payment history.</p>
-      <div class="csvbox" id="csv-drop">
-        <div class="csvrow">
-          <label class="filebtn">Upload customer list<input type="file" id="csv-file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label>
-          <button type="button" id="csv-sample">Use sample list</button>
-          <button type="button" class="primary" id="csv-go" disabled>Auto-segment</button>
-        </div>
-        <div class="small">CSV or Excel (.xlsx). Drop a file here, <button type="button" class="link" id="csv-paste-toggle" style="font-size:12px">paste CSV text</button>, or add segments by hand below. Claude sees only column summaries; names, emails, and phone numbers are never sent.</div>
-        <div class="small" id="csv-status" style="font-weight:600"></div>
-        <textarea id="csv-paste" hidden placeholder="Paste CSV here, header row first: customer_id,move_in_date,rate_type,..." style="margin-top:8px;min-height:90px"></textarea>
-      </div>
-      <div id="segments"></div>
-      <button type="button" class="link" id="add-seg">+ Add segment</button>
-    </section>
-
-    <section class="card" id="person-card" hidden>
-      <h2>Recipient</h2>
-      <div class="row">
-        <div class="field"><label for="name">Name</label><input id="name" placeholder="Dana Lee"></div>
-        <div class="field"><label for="role">Role</label><input id="role" placeholder="Owner"></div>
-      </div>
-      <div class="field"><label for="company">Company</label><input id="company" placeholder="Northside Remodeling"></div>
-      <div class="field">
-        <label for="context">What you know about them <span class="hint">(public work posts, bio, CRM notes)</span></label>
-        <textarea id="context" placeholder="Work-related only."></textarea>
-      </div>
-    </section>
+    <div class="actions examples">
+      <span class="hint" style="font-size:13px">Try an example:</span>
+      <button type="button" data-example="price">Price increase</button>
+      <button type="button" data-example="winback">Win-back</button>
+      <button type="button" data-example="cold">Cold email</button>
+    </div>
 
     <section class="card">
-      <h2>Draft</h2>
+      <h2>1 · Your email</h2>
       <div class="row">
         <div class="field">
           <label for="message_type">Message type</label>
@@ -172,6 +151,37 @@
       <div class="field"><label for="text">Message</label><textarea id="text" required placeholder="Paste the draft here."></textarea></div>
     </section>
 
+    <section class="card" id="list-card">
+      <h2>2 · Who's on the list</h2>
+      <p class="small" style="margin:-6px 0 12px">Split the list by facts you already have: how long they've been customers, last visit, plan, payment history.</p>
+      <div class="csvbox" id="csv-drop">
+        <div class="csvrow">
+          <label class="filebtn">Upload customer list<input type="file" id="csv-file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label>
+          <button type="button" id="csv-sample">Use sample list</button>
+          <button type="button" class="primary" id="csv-go" disabled>Auto-segment</button>
+        </div>
+        <div class="small">CSV or Excel (.xlsx). Drop a file here, <button type="button" class="link" id="csv-paste-toggle" style="font-size:12px">paste CSV text</button>, or add segments by hand below. Claude sees only column summaries; names, emails, and phone numbers are never sent.</div>
+        <div class="small" id="csv-status" style="font-weight:600"></div>
+        <textarea id="csv-paste" hidden placeholder="Paste CSV here, header row first: customer_id,move_in_date,rate_type,..." style="margin-top:8px;min-height:90px"></textarea>
+      </div>
+      <div id="segments"></div>
+      <button type="button" class="link" id="add-seg">+ Add segment</button>
+    </section>
+
+    <section class="card" id="person-card" hidden>
+      <h2>2 · Who it's for</h2>
+      <div class="row">
+        <div class="field"><label for="name">Name</label><input id="name" placeholder="Dana Lee"></div>
+        <div class="field"><label for="role">Role</label><input id="role" placeholder="Owner"></div>
+      </div>
+      <div class="field"><label for="company">Company</label><input id="company" placeholder="Northside Remodeling"></div>
+      <div class="field">
+        <label for="context">What you know about them <span class="hint">(public work posts, bio, CRM notes)</span></label>
+        <textarea id="context" placeholder="Work-related only."></textarea>
+      </div>
+    </section>
+
+
     <section class="card">
       <details>
         <summary>Sounds like you? <span class="hint">(optional)</span></summary>
@@ -182,15 +192,12 @@
 
     <div class="actions" style="margin-top:16px">
       <button type="submit" class="primary" id="go">Check draft</button>
-      <span class="hint" style="font-size:13px">Examples:</span>
-      <button type="button" data-example="price">Price increase</button>
-      <button type="button" data-example="winback">Win-back</button>
-      <button type="button" data-example="cold">Cold email</button>
+      <span class="hint" style="font-size:13px" id="go-hint">Checks your email against every group on the list.</span>
     </div>
   </form>
 
   <section class="result">
-    <div class="card" id="out"><div class="empty">Add the groups on your list and the draft, then press <b>Check draft</b>.<br>Or load an example.</div></div>
+    <div class="card" id="out"><div class="empty">1. Write your email.<br>2. Add who's on the list: upload it or add groups by hand.<br>3. Press <b>Check draft</b>.<br><br>Or try an example at the top.</div></div>
   </section>
 </main>
 
@@ -212,6 +219,8 @@ function setMode(m) {
   $("tab-person").classList.toggle("on", m === "person");
   $("list-card").hidden = m !== "list";
   $("person-card").hidden = m !== "person";
+  $("go-hint").textContent = m === "list" ? "Checks your email against every group on the list."
+                                          : "Checks your email against this person.";
 }
 $("tab-list").onclick = () => setMode("list");
 $("tab-person").onclick = () => setMode("person");
@@ -274,7 +283,7 @@ $("csv-sample").onclick = async () => {
 };
 $("csv-go").onclick = async () => {
   if (!$("text").value.trim()) {
-    $("csv-status").textContent = "First write or paste your email in the Message box below (or click an example). The groups depend on what the email says.";
+    $("csv-status").textContent = "First write or paste your email in step 1 above (or try an example). The groups depend on what the email says.";
     $("text").scrollIntoView({ behavior: "smooth", block: "center" });
     $("text").focus();
     return;
