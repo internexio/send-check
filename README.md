@@ -36,9 +36,13 @@ claude plugin marketplace add internexio/send-check
 claude plugin install send-check@send-check
 ```
 
-Then draft outreach as usual. Send Check scores each draft before Claude presents it, and you can ask for a check any time: "score this email before I send it to Dana, here's her bio."
+Then use Claude as usual:
 
-The plugin needs nothing else installed. Its checks use the Python standard library; if Python is unavailable, Claude applies the same rules from `skills/send-check/reference/rubric.md`.
+- **It runs on its own.** Ask Claude to write a customer email or outreach and Send Check scores the draft before Claude shows it to you.
+- **Check a draft:** "Should I send this to Dana? Here's the email … and her bio …"
+- **Check against your customer list:** "Check this price-increase email against customers.csv." Send Check profiles the file locally, proposes segments, and returns a verdict per segment. Only column summaries reach the conversation; names, emails, and phone numbers never do.
+
+The first time it runs, Claude Code asks you to allow the Send Check skill. That one approval lets it run its own check scripts for that turn. The plugin needs nothing else installed: its scripts use the Python standard library, and if Python is unavailable Claude applies the same rules from `skills/send-check/reference/rubric.md`.
 
 ## Scoring backends (pluggable)
 
