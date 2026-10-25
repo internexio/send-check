@@ -114,8 +114,8 @@
 <main>
   <form id="form">
     <div class="tabs" role="tablist">
-      <button type="button" id="tab-list" class="on">A list (segments)</button>
-      <button type="button" id="tab-person">One person</button>
+      <button type="button" id="tab-person" class="on">One person</button>
+      <button type="button" id="tab-list">A list (segments)</button>
     </div>
 
     <div class="actions examples">
@@ -197,7 +197,7 @@
   </form>
 
   <section class="result">
-    <div class="card" id="out"><div class="empty">1. Write your email.<br>2. Add who's on the list: upload it or add groups by hand.<br>3. Press <b>Check draft</b>.<br><br>Or try an example at the top.</div></div>
+    <div class="card" id="out"><div class="empty">1. Write your email.<br>2. Add who it's for: one person, or a whole list.<br>3. Press <b>Check draft</b>.<br><br>Or try an example at the top.</div></div>
   </section>
 </main>
 
@@ -206,7 +206,7 @@ const $ = (id) => document.getElementById(id);
 const LABELS = { slop: "Sounds human", personalization: "Speaks to their situation",
                  recipient_fit: "Right offer and framing", mechanics: "Length & ask" };
 const PERSON_LABELS = { ...LABELS, personalization: "Personalization", recipient_fit: "Fits this recipient" };
-let mode = "list";
+let mode = "person";
 let lastScore = null;
 
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -468,6 +468,8 @@ document.querySelectorAll("[data-example]").forEach((b) => b.onclick = () => {
 
 addSegment();
 addSegment();
+setMode("person");
+$("message_type").value = "cold";
 </script>
 </body>
 </html>
