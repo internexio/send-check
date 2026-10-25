@@ -13,16 +13,16 @@ Send Check is an open-source quality gate for AI-drafted email. Before a price i
 
 A small business rarely writes to one person. It sends one draft to a whole list, and the people on that list are in very different situations. Send Check splits the list into segments by facts the business already has (how long they've been customers, last visit, rate, payment history) and checks the draft from each group's side.
 
-Example: Cascade Self Storage raises rates 12% for 340 renters with one "our costs went up" email. Send Check measures it per segment:
+**Example.** Saltwind Kayak & Whale Tours, a two-person tour company, had its hired shuttle no-show twice in August. 31 guests missed tours they had paid for. The owners' AI-written apology, offering 20% off, was about to go to all 520 past guests. A style check passes it: Send Check scores it **100 for "sounds human"**. The writing isn't the problem. The list is:
 
-| Segment | People | Verdict | The fact behind it |
+| Segment (from the guest list) | People | Verdict | Why |
 |---|---|---|---|
-| Negotiated rate | 90 | **Scrap / hold** | Rate agreement on file: a blanket 12% reads as overriding it. Don't send until each agreement is checked |
-| Moved in under 6 months | 140 | Fix | A 12% rise weeks after signing at a quoted price reads as bait-and-switch |
-| Tenants 5+ years | 66 | Fix | Median tenure 13.8 years, and they get the same form letter as last month's move-ins |
-| Commercial, invoiced | 32 | Fix | Nothing about which invoice the new amount starts on |
+| Stranded by the August shuttle no-show | 31 | Fix | Offers 20% off when the owners' own policy promises a refund or a free rebook |
+| Deposit paid on a 2027 trip | 58 | Fix | They weren't on the affected trips, yet the apology treats them as affected |
+| Traveled this season, unaffected | 58 | **Scrap** | No shuttle problem, yet they get an apology and a discount |
+| Last trip over a year ago | 336 | **Scrap** | Apologizing to 336 unaffected people spreads the bad news |
 
-Each failing segment comes with its own version of the email to approve. (Verdicts vary a little from run to run; the facts behind them are stable.)
+Overall: **scrap**. Each group that needs a fix gets its own version to approve. (Scores move a few points between runs; the findings stay the same. The scenario and its 520-guest list are synthetic: [`corpus/fixtures/21-tour-operator-apology-to-whole-guest-list.md`](corpus/fixtures/21-tour-operator-apology-to-whole-guest-list.md) and [`saltwind-tours-guests.csv`](corpus/fixtures/data/saltwind-tours-guests.csv).)
 
 ## Try it
 
@@ -38,10 +38,15 @@ uv run python -m web.app    # open http://localhost:8000
 1. **Your email:** paste the draft, or click an example (Price increase, Win-back, Cold email).
 2. **Who it's for:**
    - **One person:** name, role, company, an optional company website, and what you know about them.
-   - **A list:** upload a customer list (CSV or Excel), drop it on the box, or paste it, then press **Auto-segment**. Or add segments by hand. A synthetic 340-customer sample list is built in.
-3. **Check draft.** You get the verdict per segment, the evidence, and a suggested version for each group that needs one.
+   - **A list:** upload a customer list (CSV or Excel), drop it on the box, or paste it, then press **Auto-segment**. Or add segments by hand. A synthetic 340-customer sample list is built in, and the Saltwind guest list is in `corpus/fixtures/data/`.
+3. **Check draft.** Results are built to scan in seconds:
+   - the verdict and score, then **one line on why**, right under it
+   - for **fix**, the suggested version (Approve & re-check, Copy); for **scrap**, one line on what it needs
+   - everything else (scores per dimension, evidence) collapsed under "Why this score"
 
-Save **Your profile** once (name, company, signature, what your business offers, a few emails you've sent). It stays in your browser, and every check uses it: suggested fixes end with your exact signature and cite only the facts you gave, and "sounds like you" uses your saved emails.
+   Lists show the same thing for every group.
+
+**Your profile** (one tab, saved in your browser only): name, company, signature, what your business offers, and a few emails you've sent. Every check uses it. Suggested fixes end with your exact signature and cite only the facts you gave. "Sounds like you" compares the draft with your saved emails. The header has a ◐ Auto / ☀ Light / ☾ Dark theme switch.
 
 Without an API key, the page still scores generic phrasing, style, and length, and estimates the rest.
 
@@ -85,7 +90,7 @@ For a list, every segment is scored in parallel. The worst segment decides the v
 
 ## Does it work?
 
-All 20 synthetic small-business scenarios in `corpus/fixtures/` were scored per segment and graded against the problems each one is expected to raise:
+The first 20 synthetic small-business scenarios in `corpus/fixtures/` were scored per segment and graded against the problems each one is expected to raise. Those expected problems were written before the tool ran, and a separate Claude call does the grading. Scenario 21 (Saltwind) was added after this run.
 
 **56 of 71 expected problems caught (79%). 6 of 7 clean cases passed without a false alarm.**
 
@@ -107,7 +112,7 @@ Send Check is the independent instrument: any draft from any source, measured ag
 | Backend | What it measures | Status |
 |---|---|---|
 | `naive` (default) | The three layers above | Built. Needs only `ANTHROPIC_API_KEY` |
-| `semalytics` | Audience fit against peer-reviewed personality and persuasion frameworks, reproducibly ([what it adds](docs/semalytics-backend-api.md)) | Adapter in progress. Needs `SENDCHECK_SEMALYTICS_KEY` |
+| `semalytics` | Audience fit against peer-reviewed personality and persuasion frameworks, reproducibly ([what it would add](docs/semalytics-backend-api.md)) | Not built. See Future scope |
 
 Every backend implements `ScoringBackend` in `scorers/base.py`, and `scorers/segments.py` scores lists with any of them.
 
@@ -119,17 +124,43 @@ Every backend implements `ScoringBackend` in `scorers/base.py`, and `scorers/seg
 | `scorers/` | Scoring contract (`base.py`), naive backend, segments, auto-segmentation, website reader |
 | `skills/send-check/` | The plugin skill: `SKILL.md`, the shared rubric, and the stdlib check scripts |
 | `.claude-plugin/` | Plugin and marketplace manifests |
-| `corpus/` | Phrase lists with attribution, 20 synthetic test emails, sample customer list, eval results |
+| `corpus/` | Phrase lists with attribution, 21 synthetic test emails, two sample lists (storage renters, tour guests), eval results |
 | `docs/` | Use cases, humanization rubric, test recipients, SEMalytics notes, plan and demo script |
-| `scripts/` | Fixture eval and sample-data generator |
+| `scripts/` | Fixture eval and sample-data generators |
 
 ## Status
 
 Built at the Claude Seattle Impact Lab hackathon, Oct 2026. Scaffold (interfaces, docs, CI) prepared the night before kickoff; implementations built at the event.
 
-Roadmap: the SEMalytics adapter, a score log for score-to-reply analysis, and checks inside Gmail and CRMs.
+**IP note:** the SEMalytics scoring API is pre-existing technology and is out of scope of hackathon-built work. This repository contains no SEMalytics internals. A future adapter would only call its public endpoint.
 
-**IP note:** the SEMalytics scoring API is pre-existing technology and is out of scope of hackathon-built work. This repository contains no SEMalytics internals, only a thin adapter to its public endpoint.
+## Future scope
+
+**Reach: no terminal, no setup**
+- A hosted version anyone can open, with no API key or install.
+- A listing in Anthropic's plugin directory, so owners add Send Check from **Customize → Plugins** in claude.ai or the desktop app, and it also works in Cowork.
+
+**A gate where email actually gets sent**
+- A send gate in Claude: when Claude is about to send through a connected Gmail or Outlook tool, a plugin hook runs Send Check first and holds anything marked scrap.
+- Checks inside the tools small businesses already use: Gmail and Outlook add-ins, and Mailchimp, Klaviyo, and HubSpot campaigns.
+- Customer lists straight from the systems that hold them (Square, Mindbody, QuickBooks, Shopify) instead of CSV exports.
+- After approval, export each group with its own version, ready to send from the owner's email tool. The owner still presses send.
+
+**Learning from outcomes**
+- A private score log that tracks replies, unsubscribes, complaints, and cancellations after each send, to show whether higher scores lead to better outcomes.
+- Per-business calibration of the weights and pass lines once there is outcome data, instead of one rubric for everyone.
+- A pilot with real small businesses and an anonymized corpus of their real emails, to replace synthetic scenarios as the main evidence.
+
+**Deeper measurement**
+- The SEMalytics backend: reproducible audience-fit scores against validated frameworks, with confidence values, as a drop-in `ScoringBackend`.
+- Rules per channel and language: SMS, LinkedIn, and non-English email.
+
+**Speed and cost**
+- Faster checks: cache draft-level results across segments, use a lighter model for simple groups, and show partial results as each group finishes.
+- A visual scorecard inside Claude (artifacts, or an interactive MCP App) for owners who never leave the chat.
+
+**Teams**
+- Shared business profiles and brand voice for small teams, kept private to the business.
 
 ## License
 
