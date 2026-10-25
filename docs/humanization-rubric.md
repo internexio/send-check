@@ -8,7 +8,7 @@ This is a 7-dimension, 28-point rubric you can apply to a draft today. It works 
 - Pass lines depend on stakes. An internal note needs 16 of 28. A client deliverable needs 21 with specificity and recipient fit at 3 or higher. Cold outreach and public copy need 23 with no dimension below 3 and at most one credibility-eroding tell.
 - Single instances rarely count. One em dash, one "enhance" or one triad in a short email costs nothing. A tell counts once it passes a frequency threshold, clusters with other tells in a paragraph, or sits where it does real damage, such as an emoji in a subject line. Graders must quote the exact span behind every deduction. Published human baselines (Pangram, Wikipedia's AI Cleanup editors) show competent writers use all of these devices at lower rates.\[1\]
 
-Detection taxonomy adapted from `unslop` (backnotprop/pstack, MIT).\[2\]\[3\]
+Detection taxonomy adapted from `unslop` in the `pstack` plugin of [cursor/plugins](https://github.com/cursor/plugins/tree/main/pstack) (MIT).\[4\] See "How this rubric relates to unslop" in Part 8 for how this differs from the backnotprop mirror.
 
 ---
 
