@@ -4,7 +4,6 @@ Run: uv run uvicorn web.app:app --reload   (or: uv run python -m web.app)
 """
 from __future__ import annotations
 
-import os
 from dataclasses import asdict
 from pathlib import Path
 from typing import Literal
@@ -14,25 +13,13 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from scorers.base import Draft, Recipient
+from scorers.env import load_env
 from scorers.naive.combine import NaiveBackend
 from scorers.segments import Segment, score_segments
 
-ROOT = Path(__file__).resolve().parents[1]
 PAGE = Path(__file__).resolve().parent / "static" / "index.html"
 
-
-def _load_env(path: Path = ROOT / ".env") -> None:
-    """Read KEY=value lines from .env without overriding the real environment."""
-    if not path.exists():
-        return
-    for line in path.read_text(encoding="utf-8").splitlines():
-        key, sep, value = line.partition("=")
-        value = value.split("#", 1)[0].strip()
-        if sep and key.strip() and not key.startswith("#") and value:
-            os.environ.setdefault(key.strip(), value)
-
-
-_load_env()
+load_env()
 app = FastAPI(title="Send Check")
 backend = NaiveBackend()
 

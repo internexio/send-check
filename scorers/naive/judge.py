@@ -35,7 +35,9 @@ results are in the request. Your job is the part a script cannot do:
 - missing: one sentence on what the draft most lacks (empty if nothing)
 
 Every evidence item is an exact quote from the draft or a script finding.
-Never invent facts about the recipient or the sender.
+Never invent facts about the recipient or the sender. Write evidence and
+suggestions in plain language for a small-business owner: never mention
+field names, script internals, or rubric caps.
 
 When "audience" is "segment", the recipient is a group on a send list and the
 same draft goes to every group. Follow the rubric's Segments section: judge

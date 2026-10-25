@@ -15,6 +15,8 @@ WEIGHTS = {"slop": 0.25, "personalization": 0.30, "recipient_fit": 0.30, "mechan
 STYLE_CHECKS = {"em_dash", "uniform_paragraphs", "three_bullets",
                 "uniform_sentences", "no_contractions"}
 MAX_IF_CAPPED = 74
+MISMATCH_FIT = 30           # recipient_fit below this is the rubric's "mismatched" band
+MAX_IF_MISMATCHED = 44
 
 
 class NaiveBackend:
@@ -115,6 +117,9 @@ def _score(draft: Draft, recipient: Recipient, message_type: str,
     if caps:
         overall = min(overall, MAX_IF_CAPPED)
         notes.append("blocks send: " + "; ".join(caps))
+    if judgment and recipient_fit.score < MISMATCH_FIT:
+        overall = min(overall, MAX_IF_MISMATCHED)
+        notes.append("wrong for this reader: the offer or framing does not fit their facts")
 
     verdict = verdict_from_score(overall)
     fix = judgment.suggested_fix if judgment and verdict == "fix" else ""

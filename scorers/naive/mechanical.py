@@ -97,7 +97,7 @@ def check(text: str, message_type: str = "cold",
     # You/I balance
     n_you = sum(w in YOU_WORDS for w in lower)
     n_self = sum(w in SELF_WORDS for w in lower)
-    if n_self > n_you:
+    if n_self > n_you and n_self >= 3:   # one "us" in a two-line notice is not a pattern
         add("you_i_ratio", 10,
             f"talks about the sender more than the reader ({n_self} I/we vs {n_you} you)")
 

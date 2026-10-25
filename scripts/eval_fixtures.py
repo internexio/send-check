@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scorers.base import Draft  # noqa: E402
+from scorers.env import load_env  # noqa: E402
 from scorers.naive.combine import NaiveBackend  # noqa: E402
 from scorers.naive.judge import DEFAULT_MODEL  # noqa: E402
 from scorers.segments import Segment, score_segments  # noqa: E402
@@ -80,7 +81,7 @@ def split_segments(list_line: str) -> list[str]:
 
     'Entire base, 1,200 people — only 180 received X' -> affected / not affected.
     """
-    m = re.search(r"\bonly (.+)", list_line)
+    m = re.search(r"[—;]\s*only (\d.+)", list_line)   # not "discount-only buyers"
     if m:
         whole = re.split(r"\s*[—;]\s*", list_line)[0]
         return [f"Affected: {m.group(1).rstrip('.')}",
@@ -112,6 +113,9 @@ def run_fixture(fx: dict) -> dict:
         message_type=message_type,
         audience="segment",
     )
+    for s in result.segments:
+        if "personalization and fit are script estimates" in s.scorecard.notes:
+            raise RuntimeError(f"judge did not run for fixture {fx['number']}: {s.scorecard.notes}")
     return asdict(result)
 
 
@@ -137,6 +141,7 @@ def grade(fx: dict, result: dict) -> FixtureGrade:
 
 
 def main(numbers: list[int]) -> None:
+    load_env()
     paths = sorted(p for p in FIXTURES.glob("[0-9][0-9]-*.md")
                    if not numbers or int(p.name[:2]) in numbers)
     fixtures = [parse_fixture(p) for p in paths]

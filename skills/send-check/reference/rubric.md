@@ -38,8 +38,8 @@ strongest first. If the script could not run, find the phrases by reading
 | 30–59 | Only merge fields (name, company, title) or vague category fit ("businesses like yours") |
 | 0–29 | Nothing specific, or a fake-warm opener: flattery, "I've been following your work", an invented connection |
 
-If `recipient_terms_found` is empty and recipient context was given, the
-score is at most 40. Evidence: quote the line that carries the detail, or the
+For a single recipient (not a segment): if `recipient_terms_found` is empty
+and recipient context was given, the score is at most 40. Evidence: quote the line that carries the detail, or the
 line where a detail should have been.
 
 **Over-personalization.** Personal is not the same as personalized. Flag any
@@ -85,16 +85,50 @@ observable facts, such as "10-year tenants", "lapsed 14 months", or
 - **Name the fact.** Every finding says which fact it rests on, e.g.
   "tenure 10 years: the draft gives a 10-year tenant the same boilerplate as
   a 3-month renter."
-- **personalization** means: does the draft acknowledge this group's actual
-  situation? It does not need to repeat the facts word for word.
-- **recipient_fit** means: are the offer, the framing, and the stakes right
-  for this group? Common misses: an offer too weak for how cold the
-  relationship is; false intimacy ("we've missed you") with people who were
-  never regulars; wording that contradicts a prior agreement; cost-based
-  justification ("our costs went up") to loyal customers; one fee or rule
-  applied to people it cannot fit.
-- **Do not cry wolf.** When the draft already fits a segment, score it high
-  and say so. Uniform wording is right when the situation is uniform.
+- **Use these bands for segments**, not the single-recipient bands above.
+  The question is whether the draft gets this group's situation right, not
+  whether it names them.
+
+  | Band | personalization | recipient_fit |
+  |---|---|---|
+  | 85–100 | Gets this group's situation right, including when the message applies to everyone the same way and nothing about this group changes it | Offer, framing, and stakes fit this group |
+  | 60–84 | Right overall, but leaves out one thing this group would want to know | A minor tone or ask issue for this group |
+  | 30–59 | Assumes a situation this group is not in, or leaves out something that changes the message for them | The wrong strength of offer or framing for this group; a fee or rule stated to people it may not apply to |
+  | 0–29 | Contradicts their facts | Mismatched: contradicts a prior agreement, claims a relationship that never existed, or would push this group away |
+
+- Common misses: an offer too weak for how cold the relationship is; false
+  intimacy ("we've missed you") with people who were never regulars;
+  wording that contradicts a prior agreement; cost-based justification
+  ("our costs went up") to loyal customers; one fee or rule applied to
+  people it cannot fit.
+- **These are real misses, always flag them:** cost-based justification
+  ("our costs went up", "we can no longer absorb"), which a 2026 field
+  experiment found does no better than silence; no word on what the reader
+  gets or what stays the same when something gets worse for them; missing
+  practical details that this group's facts make necessary (billing changes
+  for invoiced business accounts, whether a fee applies to people on hold or
+  on a different kind of plan); ignoring how long they waited or how long
+  they have been customers.
+- **Problems in the draft itself still count for every group:** empty
+  urgency or scarcity ("spots are limited" with no number), a sign-off that
+  does not match who is sending (a department name from a three-person
+  shop), claims of severity out of proportion to what happened, a pitch
+  framed as the reader's benefit that is really the sender's, and an offer
+  with no limits stated where people will ask.
+- **Sometimes the fix is not to send it to this group.** When a group
+  should not get this message at all (people it does not concern, people in
+  a dispute or negotiation, contacts who should not be on the list), say so,
+  score recipient_fit in the mismatched band, and make the suggested fix
+  start with "Do not send to this group:" and the reason, followed by what
+  to send them instead, if anything.
+- **Do not cry wolf.** Beyond those, deduct only for problems grounded in
+  this group's facts. Gaps that apply to every group equally (no greeting,
+  no how-to steps) are about the draft, not the group: mention them as
+  suggestions and deduct at most 10 points. A group whose facts raise no
+  special issue lands in the 75–100 band. Pure wording preferences (not
+  saying "you", a slightly formal tone) are suggestions, not deductions. When the draft already fits
+  a segment, score it high and say so. Uniform wording is right when the
+  situation is uniform.
 - **The suggested fix** is the version of the draft for this segment. Keep
   everything that already works and change only what this segment's facts
   require.
@@ -108,6 +142,9 @@ overall = round(0.25 * slop + 0.30 * personalization + 0.30 * recipient_fit + 0.
 If `caps` from the script is not empty, or the draft is over-personalized,
 overall is at most 74: a capped draft cannot get "send" until the capped
 issue is fixed.
+
+If recipient_fit is below 30 (the "mismatched" band), overall is at most 44:
+a draft that is wrong for its reader is a scrap, however clean its style.
 
 Verdict, matching `verdict_from_score()` in `scorers/base.py`:
 
