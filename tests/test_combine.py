@@ -88,3 +88,11 @@ def test_placeholder_sign_off_is_replaced_not_kept():
     from scorers.naive.combine import _with_signature
     fixed = _with_signature("Hi Dana,\nWant a quote Friday?\n\n[Your Name]\n[Your Title]", SENDER["signature"])
     assert "[Your" not in fixed and fixed.endswith(SENDER["signature"])
+
+
+def test_first_note_is_a_one_line_reason():
+    card = NaiveBackend().score(
+        Draft(text="Certainly! Here's a draft:\n\nHi Dana, saw your Fremont post. Want a demo Friday?"),
+        Recipient(name="Dana", context="Posted about the Fremont remodel"))
+    first = card.notes.split(" | ")[0]
+    assert first == 'reason: Leftover AI assistant text: "Certainly! Here\'s"'

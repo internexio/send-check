@@ -112,6 +112,18 @@
   .who button { font-size: 13px; padding: 4px 10px; }
   .sig-preview { white-space: pre-wrap; font-size: 13px; background: var(--field); border: 1px solid var(--line);
                  border-radius: 8px; padding: 10px; color: var(--muted); }
+  .reason { margin-top: 10px; padding: 12px 14px; font-size: 16px; font-weight: 650; line-height: 1.35;
+            background: var(--field); border-left: 4px solid var(--line); border-radius: 0 8px 8px 0; }
+  .reason.send { border-left-color: var(--send); }
+  .reason.fix { border-left-color: var(--fix); }
+  .reason.scrap { border-left-color: var(--scrap); }
+  .reason-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+                  text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+  .segcard .reason { font-size: 14px; padding: 8px 10px; }
+  .needs { margin-top: 8px; font-size: 14px; }
+  details.why { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  details.why summary { font-size: 14px; color: var(--muted); }
+  .fixbox.clamp { max-height: 190px; overflow: auto; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -474,78 +486,98 @@ async function run(previous = null) {
 }
 
 // ---- rendering ----
+// Layout: verdict and score, the one-line reason right below, then the
+// suggested version (fix) or what it needs (scrap); details stay collapsed.
+const REASON_LABEL = { send: "Why it's ready", fix: "Why it needs a fix", scrap: "Why it's a scrap" };
+const ISSUE = /^(blocks send|disqualified|wrong for this reader)/;
+
+function parts(card) {
+  const notes = card.notes ? card.notes.split(" | ") : [];
+  const pick = (prefix) => (notes.find((n) => n.startsWith(prefix)) || "").slice(prefix.length);
+  const rest = notes.filter((n) => !n.startsWith("reason: ") && !n.startsWith("what it needs: "));
+  return { reason: pick("reason: "), needs: pick("what it needs: "),
+           issues: rest.filter((n) => ISSUE.test(n)), info: rest.filter((n) => !ISSUE.test(n)) };
+}
+const reasonHtml = (verdict, reason) => reason ? `<div class="reason ${verdict}">
+    <span class="reason-label">${REASON_LABEL[verdict]}</span>${esc(reason)}</div>` : "";
+const needsHtml = (needs) => needs ? `<div class="needs"><b>What it needs:</b> ${esc(needs)}</div>` : "";
 const dimHtml = (d, labels) => `<div class="dim">
     <div class="dim-head"><span>${labels[d.name] || d.name}</span><span>${d.score}</span></div>
     <div class="bar"><span style="width:${d.score}%;background:${color(d.score)}"></span></div>
-    ${d.evidence.length ? `<ul>${d.evidence.slice(0, 4).map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
+    ${d.evidence.length ? `<ul>${d.evidence.slice(0, 3).map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
     ${d.suggestion ? `<div class="tip">→ ${esc(d.suggestion)}</div>` : ""}
   </div>`;
-const notesHtml = (notes) => notes.length ? `<ul class="notes">${notes.map((n) =>
-    `<li class="${/^(blocks send|disqualified|wrong for this reader)/.test(n) ? "" : "info"}">${esc(n)}</li>`).join("")}</ul>` : "";
-const splitNotes = (card) => card.notes ? card.notes.split(" | ") : [];
+const listHtml = (items, cls) => items.length
+  ? `<ul class="notes">${items.map((n) => `<li class="${cls}">${esc(n)}</li>`).join("")}</ul>` : "";
+function detailsHtml(title, dims, labels, issues = [], info = []) {
+  const count = issues.length + dims.filter((d) => d.score < 75).length;
+  return `<details class="why"><summary>${title}${count ? ` · ${count} to look at` : ""}</summary>
+      ${listHtml(issues, "")}${listHtml(info, "info")}
+      ${dims.map((d) => dimHtml(d, labels)).join("")}
+    </details>`;
+}
+
+function renderPerson(card, previous) {
+  lastScore = card.score;
+  const p = parts(card);
+  const delta = previous !== null ? `<span class="delta">was ${previous}/100</span>` : "";
+  let html = `<div class="verdict ${card.verdict}">
+      <span class="badge">${card.verdict.toUpperCase()}</span><span><b>${card.score}</b>/100</span>${delta}</div>`;
+  html += reasonHtml(card.verdict, p.reason);
+  if (card.verdict === "scrap") html += needsHtml(p.needs);
+  if (card.suggested_fix) {
+    html += `<h2 class="block-title">Suggested version (approve before use)</h2>
+      <div class="fixbox">${esc(card.suggested_fix)}</div>
+      <div class="actions" style="margin-top:10px">
+        <button class="primary" type="button" id="approve">Approve &amp; re-check</button>
+        <button type="button" id="copy">Copy</button>
+      </div>`;
+  }
+  html += detailsHtml("Why this score", card.dimensions, PERSON_LABELS, p.issues, p.info);
+  html += `<div class="small">Nothing is sent. Approving puts the version in the message box and checks it again.</div>`;
+  $("out").innerHTML = html;
+  if (card.suggested_fix) {
+    $("approve").onclick = () => { $("text").value = card.suggested_fix; run(lastScore); };
+    $("copy").onclick = async () => { await navigator.clipboard.writeText(card.suggested_fix); $("copy").textContent = "Copied"; };
+  }
+}
 
 function renderList(data) {
   const results = data.segments;
-  // Notes and draft-level scores are the same for every segment: show them once.
-  const noteSets = results.map((r) => splitNotes(r.scorecard));
-  const shared = noteSets[0].filter((n) => noteSets.every((s) => s.includes(n)));
-  const first = results[0].scorecard.dimensions;
-  const draftDims = first.filter((d) => d.name === "slop" || d.name === "mechanics");
+  // Notes and draft-level scores are the same for every group: show them once.
+  const noteSets = results.map((r) => r.scorecard.notes ? r.scorecard.notes.split(" | ") : []);
+  const shared = noteSets[0].filter((n) => !n.startsWith("reason: ") && noteSets.every((s) => s.includes(n)));
+  const draftDims = results[0].scorecard.dimensions.filter((d) => d.name === "slop" || d.name === "mechanics");
 
   let html = `<div class="verdict ${data.verdict}">
       <span class="badge">${data.verdict.toUpperCase()}</span><span><b>${data.score}</b>/100</span>
       <span class="summary">${esc(data.summary)}</span></div>`;
-  html += notesHtml(shared);
-  html += `<h2 class="block-title">Each group on the list</h2>`;
   html += results.map((r, i) => {
     const c = r.scorecard;
+    const p = parts(c);
+    const own = (list) => list.filter((n) => !shared.includes(n));
     const dims = c.dimensions.filter((d) => d.name === "personalization" || d.name === "recipient_fit");
-    const own = splitNotes(c).filter((n) => !shared.includes(n));
     return `<div class="segcard">
       <div class="segcard-head">
         <span class="name">${esc(r.segment.label)}</span>
         ${r.segment.size ? `<span class="size">${r.segment.size} people</span>` : ""}
         <span class="pill ${c.verdict}">${c.verdict.toUpperCase()} · ${c.score}</span>
       </div>
-      ${notesHtml(own)}
-      ${dims.map((d) => dimHtml(d, LABELS)).join("")}
-      ${c.suggested_fix ? `<details><summary>Version for this group</summary>
-          <div class="fixbox" id="fix-${i}">${esc(c.suggested_fix)}</div>
-          <div class="actions" style="margin-top:8px"><button type="button" data-copy="${i}">Copy</button></div>
-        </details>` : ""}
+      ${reasonHtml(c.verdict, p.reason)}
+      ${c.verdict === "scrap" ? needsHtml(p.needs) : ""}
+      ${c.suggested_fix ? `<div class="fixbox clamp">${esc(c.suggested_fix)}</div>
+          <div class="actions" style="margin-top:8px"><button type="button" data-copy="${i}">Copy version</button></div>` : ""}
+      ${detailsHtml("Details", dims, LABELS, own(p.issues), own(p.info))}
     </div>`;
   }).join("");
-  html += `<h2 class="block-title">The draft itself (same for everyone)</h2>`;
-  html += draftDims.map((d) => dimHtml(d, LABELS)).join("");
+  html += detailsHtml("The draft itself (same for every group)", draftDims, LABELS,
+                      shared.filter((n) => ISSUE.test(n)), shared.filter((n) => !ISSUE.test(n)));
   html += `<div class="small">Approve a version before you use it. Nothing is sent.</div>`;
   $("out").innerHTML = html;
   document.querySelectorAll("[data-copy]").forEach((b) => b.onclick = async () => {
     await navigator.clipboard.writeText(results[+b.dataset.copy].scorecard.suggested_fix);
     b.textContent = "Copied";
   });
-}
-
-function renderPerson(card, previous) {
-  lastScore = card.score;
-  const delta = previous !== null ? `<span class="delta">was ${previous}/100</span>` : "";
-  let html = `<div class="verdict ${card.verdict}">
-      <span class="badge">${card.verdict.toUpperCase()}</span><span><b>${card.score}</b>/100</span>${delta}</div>`;
-  html += notesHtml(splitNotes(card));
-  html += card.dimensions.map((d) => dimHtml(d, PERSON_LABELS)).join("");
-  if (card.suggested_fix) {
-    html += `<h2 class="block-title">Suggested fix (approve before use)</h2>
-      <div class="fixbox">${esc(card.suggested_fix)}</div>
-      <div class="actions" style="margin-top:10px">
-        <button class="primary" type="button" id="approve">Approve &amp; re-check</button>
-        <button type="button" id="copy">Copy</button>
-      </div>
-      <div class="small">Approving puts the fix in the message box and checks it again. Nothing is sent.</div>`;
-  }
-  $("out").innerHTML = html;
-  if (card.suggested_fix) {
-    $("approve").onclick = () => { $("text").value = card.suggested_fix; run(lastScore); };
-    $("copy").onclick = async () => { await navigator.clipboard.writeText(card.suggested_fix); $("copy").textContent = "Copied"; };
-  }
 }
 
 $("form").addEventListener("submit", (e) => { e.preventDefault(); run(); });

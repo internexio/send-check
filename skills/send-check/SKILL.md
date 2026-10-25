@@ -92,12 +92,20 @@ For "scrap", explain what is missing instead of patching.
 
 ## Output format
 
-1. One line: **Verdict: SEND | FIX | SCRAP: {score}/100** (naive backend)
-2. A table: dimension, score, strongest piece of evidence. When voice was
-   measured, add a "sounds like you" row with its score and top difference
-3. For "fix": the suggested fix as a quoted block labeled **Suggested fix
-   (approve before use)**, followed by its own score, e.g. "Fix scores 82/100: send"
-4. One line on what changed and why
+Crisp and scannable. No paragraphs.
+
+1. One line: **Verdict: SEND | FIX | SCRAP: {score}/100**
+2. Directly under it, one line of at most 15 words saying why, naming the
+   fact or the quoted phrase it rests on: **Why:** …
+3. Then, by verdict:
+   - **fix:** the suggested fix as a quoted block labeled **Suggested version
+     (approve before use)**, then its own score in one line, e.g. "Version
+     scores 82/100: send"
+   - **scrap:** one line, **What it needs:** …, and no patched draft
+   - **send:** nothing more
+4. Last, the details: a table of dimension, score, and the strongest piece
+   of evidence (under 20 words each). When voice was measured, add a
+   "sounds like you" row.
 
 ## One draft to a list: check it per segment
 
@@ -132,7 +140,9 @@ situation. When a draft goes to a list:
    literal recipient-detail cap: one draft cannot repeat every segment's facts.
 4. Roll up: the draft is ready only when every segment says send. Lead with a
    line such as "FIX: 2 of 3 segments need changes (290 of 410 people)", then
-   a table of segment, size, verdict, score, and the fact-based finding.
+   a table of segment, size, verdict, score, and a one-line why (at most 15
+   words, naming the fact). Put problems shared by every version in one
+   short list after the table.
 5. Offer a version for each failing segment, each one approved before use.
 
 ## Checking several drafts at once
