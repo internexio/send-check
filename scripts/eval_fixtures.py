@@ -6,7 +6,7 @@ scores the draft per segment with the naive backend, then asks a Claude grader
 whether each expected flag was caught. Results go to corpus/validation/.
 
 Usage:
-    uv run python scripts/eval_fixtures.py              # all 20 fixtures
+    uv run python scripts/eval_fixtures.py              # all fixtures
     uv run python scripts/eval_fixtures.py 1 6 9 16     # a subset by number
 
 Costs API calls: one judge call per segment plus one grader call per fixture.
