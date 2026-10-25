@@ -21,19 +21,25 @@ class NaiveBackend:
     name = "naive"
 
     def score(self, draft: Draft, recipient: Recipient, message_type: str = "cold",
-              owner_samples: list[str] | None = None) -> Scorecard:
+              owner_samples: list[str] | None = None, audience: str = "person") -> Scorecard:
+        """audience is "person" (one recipient) or "segment" (a group on a send
+        list, see scorers/segments.py)."""
         try:
-            return _score(draft, recipient, message_type, owner_samples or [])
+            return _score(draft, recipient, message_type, owner_samples or [], audience)
         except Exception as e:  # contract: never raise from score()
             return Scorecard(verdict="fix", score=0, dimensions=[], backend=self.name,
                              notes=f"scoring failed: {e}")
 
 
 def _score(draft: Draft, recipient: Recipient, message_type: str,
-           owner_samples: list[str]) -> Scorecard:
+           owner_samples: list[str], audience: str) -> Scorecard:
     context = " ".join(p for p in (recipient.role, recipient.context) if p)
     mech = mechanical.check(draft.text, message_type=message_type, recipient_context=context,
                             recipient_name=recipient.name, recipient_company=recipient.company)
+    if audience == "segment":
+        # One draft goes to every segment, so it cannot echo each segment's
+        # facts word for word; the judge decides whether it fits the facts.
+        mech["findings"] = [f for f in mech["findings"] if f["check"] != "personalization"]
     sl = slop.check(draft.text)
     vc = voice.compare(draft.text, owner_samples) if owner_samples else None
 
@@ -50,6 +56,7 @@ def _score(draft: Draft, recipient: Recipient, message_type: str,
             judgment = judge({
                 "draft": {"subject": draft.subject, "text": draft.text, "channel": draft.channel},
                 "message_type": message_type,
+                "audience": audience,
                 "recipient": {"name": recipient.name, "role": recipient.role,
                               "company": recipient.company, "context": recipient.context},
                 "script_results": {"mechanical": mech, "slop": sl, "voice": vc, "caps": caps},
@@ -83,10 +90,14 @@ def _score(draft: Draft, recipient: Recipient, message_type: str,
                                        fit.evidence, fit.suggestion)
     else:
         found = mech["recipient_terms_found"]
-        personalization = DimensionScore(
-            "personalization", 60 if found else (30 if context else 50),
-            [f"recipient details used: {', '.join(found)}"] if found
-            else ["no recipient details found in the draft"])
+        if audience == "segment":
+            personalization = DimensionScore("personalization", 50,
+                                             ["segment fit not measured without the judge"])
+        else:
+            personalization = DimensionScore(
+                "personalization", 60 if found else (30 if context else 50),
+                [f"recipient details used: {', '.join(found)}"] if found
+                else ["no recipient details found in the draft"])
         recipient_fit = DimensionScore("recipient_fit", 50, ["not measured without the judge"])
 
     dimensions = [

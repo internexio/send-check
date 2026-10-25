@@ -16,6 +16,7 @@ LENGTH_CEILINGS = {
     "follow_up": 60,
     "warm": 150,
     "post_meeting": 100,
+    "customer": 150,    # Send Check default for emails to existing customers
 }
 
 YOU_WORDS = {"you", "your", "yours", "you're", "you've", "you'll", "you'd"}
@@ -102,7 +103,7 @@ def check(text: str, message_type: str = "cold",
 
     # Ask count
     n_asks = len(re.findall(r"\?", norm))
-    if n_asks == 0:
+    if n_asks == 0 and message_type != "customer":   # notices to customers need no question
         add("ask", 10, "no question for the reader to answer; the ask is unclear")
     elif n_asks > 1:
         add("ask", min(15, 5 * (n_asks - 1)),

@@ -71,6 +71,34 @@ Start at 100 and deduct the points of every mechanical finding except
 `personalization`, `em_dash`, `uniform_paragraphs`, and `three_bullets`
 (those are counted above). Evidence: each finding's `detail`.
 
+## Segments: one message to many recipients
+
+A draft sent to a list is N messages: each group on the list reads it from
+its own situation. When the recipient is a segment (a group that shares
+observable facts, such as "10-year tenants", "lapsed 14 months", or
+"negotiated their rate last year"), score it like this:
+
+- **Facts, not personas.** Judge only against the segment's stated facts:
+  tenure, plan or price tier, purchase or service history, days overdue,
+  engagement recency, prior agreements. Never invent personality traits,
+  feelings, or demographics.
+- **Name the fact.** Every finding says which fact it rests on, e.g.
+  "tenure 10 years: the draft gives a 10-year tenant the same boilerplate as
+  a 3-month renter."
+- **personalization** means: does the draft acknowledge this group's actual
+  situation? It does not need to repeat the facts word for word.
+- **recipient_fit** means: are the offer, the framing, and the stakes right
+  for this group? Common misses: an offer too weak for how cold the
+  relationship is; false intimacy ("we've missed you") with people who were
+  never regulars; wording that contradicts a prior agreement; cost-based
+  justification ("our costs went up") to loyal customers; one fee or rule
+  applied to people it cannot fit.
+- **Do not cry wolf.** When the draft already fits a segment, score it high
+  and say so. Uniform wording is right when the situation is uniform.
+- **The suggested fix** is the version of the draft for this segment. Keep
+  everything that already works and change only what this segment's facts
+  require.
+
 ## Overall score and verdict
 
 ```

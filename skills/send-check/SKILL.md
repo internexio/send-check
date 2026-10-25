@@ -1,8 +1,10 @@
 ---
 name: send-check
 description: >
-  Scores a drafted outreach message (cold email, follow-up, LinkedIn note,
-  proposal cover) against the person who will receive it, before it is sent.
+  Scores a drafted email or outreach message against the people who will
+  receive it, before it is sent: one recipient, or each segment of a send
+  list (price increases, win-back offers, invoice reminders, policy notices,
+  cold emails, follow-ups).
   Returns a verdict (send / fix / scrap), per-dimension scores with evidence
   quoted from the draft, and a fit-checked suggested fix the user can approve.
   Use when the user asks to check, score, review, or vet a draft, or asks
@@ -39,8 +41,10 @@ measure and report. The owner decides.
    about their work, company, or market) are the best context there is. Use
    connected enrichment tools (Apollo, Clay, HubSpot) when available. Never
    collect or use details about the recipient's private life.
-3. **The message type:** cold, follow_up, warm, or post_meeting. Infer it from
-   the draft; default to cold.
+3. **The message type:** customer (updates, offers, reminders to existing
+   customers), cold, follow_up, warm, or post_meeting. Infer it from the
+   draft; default to cold for prospects and customer for existing customers.
+   If the draft goes to a list, follow "One draft to a list" below.
 4. **The owner's voice (optional):** 2 or 3 emails the owner actually sent.
    If a voice profile from outreach-composer exists, use its samples. Offer
    this once: "Paste 2 or 3 emails you've sent and I'll check this sounds like
@@ -90,6 +94,28 @@ For "scrap", explain what is missing instead of patching.
 3. For "fix": the suggested fix as a quoted block labeled **Suggested fix
    (approve before use)**, followed by its own score, e.g. "Fix scores 82/100: send"
 4. One line on what changed and why
+
+## One draft to a list: check it per segment
+
+Most small-business email goes to many people at once: a price increase, a
+win-back offer, invoice reminders, a policy change. One message to many
+recipients is N messages, because each group reads it from its own
+situation. When a draft goes to a list:
+
+1. Ask how the list splits by facts the owner already has: tenure, last
+   visit or purchase, plan or price paid, payment history, prior agreements.
+   Two to five segments, each with a label, its facts, and roughly how many
+   people. Never invent personas or traits; use facts only.
+2. Run the script once on the draft (message_type `customer` for emails to
+   existing customers). Generic phrasing, style, and length are the same for
+   every segment.
+3. Score personalization and recipient_fit per segment with the rubric's
+   Segments section, naming the fact each finding rests on. Do not apply the
+   literal recipient-detail cap: one draft cannot repeat every segment's facts.
+4. Roll up: the draft is ready only when every segment says send. Lead with a
+   line such as "FIX: 2 of 3 segments need changes (290 of 410 people)", then
+   a table of segment, size, verdict, score, and the fact-based finding.
+5. Offer a version for each failing segment, each one approved before use.
 
 ## Checking several drafts at once
 
