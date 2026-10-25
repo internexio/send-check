@@ -24,8 +24,21 @@ The free tier is the instrument, a recipient-aware judge, the gate, and the log.
 
 ## Use it two ways
 
-- **As a Claude skill** — `/send-check` inside Claude, in the style of the official [Claude for Small Business plugin](https://github.com/anthropics/knowledge-work-plugins)
-- **As a web page** — paste a draft, get a verdict in seconds
+- **As a Claude plugin** — runs on its own whenever Claude drafts outreach, or on request ("should I send this?"), in the style of the official [Claude for Small Business plugin](https://github.com/anthropics/knowledge-work-plugins)
+- **As a web page** — paste the draft and either upload a customer CSV (Send Check proposes the segments) or add segments by hand; get a verdict per segment with the fact behind each finding and a version for each group. A one-person mode scores single outreach messages. With a CSV, only column summaries reach Claude: names, emails, phone numbers, IDs, and free-text columns stay on the server
+
+## Install the plugin
+
+In Claude Code:
+
+```bash
+claude plugin marketplace add internexio/send-check
+claude plugin install send-check@send-check
+```
+
+Then draft outreach as usual. Send Check scores each draft before Claude presents it, and you can ask for a check any time: "score this email before I send it to Dana, here's her bio."
+
+The plugin needs nothing else installed. Its checks use the Python standard library; if Python is unavailable, Claude applies the same rules from `skills/send-check/reference/rubric.md`.
 
 ## Scoring backends (pluggable)
 
@@ -39,11 +52,13 @@ The default backend asks "is this good outreach?" The SEMalytics backend measure
 ## Quickstart
 
 ```bash
-git clone https://github.com/SEMalytics/send-check && cd send-check
+git clone https://github.com/internexio/send-check && cd send-check
 uv sync
 cp .env.example .env   # optional: add keys
 uv run python -m web.app   # paste-box demo at localhost:8000
 ```
+
+Add `ANTHROPIC_API_KEY` to `.env` for the full verdict and suggested fix. Without a key the page still scores generic phrasing, style, and length, and estimates the rest.
 
 ## Status
 

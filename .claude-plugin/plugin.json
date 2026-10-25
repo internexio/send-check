@@ -1,0 +1,21 @@
+{
+  "name": "send-check",
+  "displayName": "Send Check",
+  "version": "0.1.0",
+  "description": "Scores AI-drafted outreach against the person who will receive it, before it is sent. Returns a verdict (send, fix, or scrap), evidence quoted from the draft, and a fit-checked suggested fix you approve. Runs on its own after Claude drafts outreach. Never sends anything.",
+  "author": {
+    "name": "Send Check contributors"
+  },
+  "homepage": "https://github.com/internexio/send-check",
+  "repository": "https://github.com/internexio/send-check",
+  "license": "MIT",
+  "keywords": [
+    "outreach",
+    "cold-email",
+    "quality-gate",
+    "sales",
+    "small-business",
+    "smb",
+    "slop"
+  ]
+}

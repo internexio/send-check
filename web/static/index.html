@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Send Check</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a65; --line: #e3e1da;
+    --accent: #c4623a; --accent-ink: #ffffff; --field: #fbfaf7;
+    --send: #2f7d4f; --send-bg: #e6f2ea; --fix: #a86a12; --fix-bg: #fbf0dc;
+    --scrap: #b23b32; --scrap-bg: #f8e3e1; --bar: #ebe9e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614; --card: #1f1f1d; --ink: #ecebe6; --muted: #a09e97; --line: #33322e;
+      --accent: #e07a4f; --accent-ink: #161614; --field: #191917;
+      --send: #6cc58f; --send-bg: #1d2e23; --fix: #e3a94b; --fix-bg: #33291a;
+      --scrap: #ec7d73; --scrap-bg: #36201e; --bar: #2c2b28;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { max-width: 1180px; margin: 0 auto; padding: 28px 20px 8px; }
+  header h1 { margin: 0; font-size: 24px; letter-spacing: -0.01em; display: inline; }
+  header p { margin: 0 0 0 12px; color: var(--muted); display: inline; }
+  main { max-width: 1180px; margin: 0 auto; padding: 12px 20px 48px; display: grid;
+         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .card + .card, .card + .actions { margin-top: 16px; }
+  h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em;
+       color: var(--muted); font-weight: 600; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 0 0 4px; }
+  .hint { font-weight: 400; color: var(--muted); }
+  .field { margin-bottom: 12px; }
+  input, textarea, select { width: 100%; font: inherit; color: var(--ink); background: var(--field);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
+  textarea { resize: vertical; min-height: 80px; }
+  #text { min-height: 170px; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  details summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  details[open] summary { margin-bottom: 10px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; font-weight: 600; border-radius: 8px; padding: 9px 15px; cursor: pointer;
+           border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.link { border: 0; background: none; padding: 4px 0; color: var(--accent); }
+  button:disabled { opacity: 0.6; cursor: wait; }
+  .tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; padding: 3px;
+          background: var(--card); margin-bottom: 14px; }
+  .tabs button { border: 0; padding: 7px 14px; border-radius: 7px; background: none; color: var(--muted); }
+  .tabs button.on { background: var(--accent); color: var(--accent-ink); }
+  .seg { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px;
+         background: var(--field); }
+  .seg-head { display: grid; grid-template-columns: 1fr 110px 32px; gap: 8px; margin-bottom: 8px; }
+  .seg-head button { padding: 0; font-size: 18px; line-height: 1; color: var(--muted); }
+  .seg textarea { min-height: 54px; background: var(--card); }
+  .seg .why { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .csvbox { border: 1px dashed var(--line); border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+  .csvbox.over { border-color: var(--accent); background: var(--field); }
+  .examples { margin-bottom: 14px; }
+  .examples button { padding: 6px 12px; font-size: 14px; }
+  .csvrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filebtn { display: inline-block; margin: 0; font-size: 15px; font-weight: 600; border: 1px solid var(--line);
+             border-radius: 8px; padding: 9px 15px; cursor: pointer; background: var(--card); }
+  .seg input { background: var(--card); }
+  .result { position: sticky; top: 16px; }
+  .empty { color: var(--muted); text-align: center; padding: 48px 12px; }
+  .verdict { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 10px; flex-wrap: wrap; }
+  .verdict .badge { font-size: 26px; font-weight: 800; letter-spacing: 0.04em; }
+  .verdict b { font-size: 22px; }
+  .verdict .summary { flex-basis: 100%; font-size: 14px; font-weight: 600; }
+  .send { background: var(--send-bg); color: var(--send); }
+  .fix { background: var(--fix-bg); color: var(--fix); }
+  .scrap { background: var(--scrap-bg); color: var(--scrap); }
+  .delta { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .notes { margin: 12px 0 0; padding: 0; list-style: none; font-size: 13px; }
+  .notes li { padding: 8px 10px; border-left: 3px solid var(--scrap); background: var(--field);
+              border-radius: 0 6px 6px 0; margin-bottom: 6px; }
+  .notes li.info { border-left-color: var(--line); color: var(--muted); }
+  .dim { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .dim:last-child { border-bottom: 0; }
+  .dim-head { display: flex; justify-content: space-between; font-weight: 600; font-size: 14px; }
+  .bar { height: 6px; background: var(--bar); border-radius: 3px; margin: 6px 0 8px; overflow: hidden; }
+  .bar span { display: block; height: 100%; border-radius: 3px; }
+  .dim ul { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  .tip { font-size: 13px; margin-top: 6px; }
+  .block-title { margin: 18px 0 6px; }
+  .segcard { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 10px; }
+  .segcard-head { display: flex; align-items: center; gap: 10px; }
+  .segcard-head .name { font-weight: 700; }
+  .segcard-head .size { color: var(--muted); font-size: 13px; }
+  .pill { margin-left: auto; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; padding: 3px 9px;
+          border-radius: 999px; white-space: nowrap; }
+  .fixbox { white-space: pre-wrap; background: var(--field); border: 1px solid var(--line);
+            border-left: 3px solid var(--fix); border-radius: 8px; padding: 12px; font-size: 14px; margin-top: 8px; }
+  .small { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor;
+             border-right-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;
+             vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Send Check</h1>
+  <p>One email to many people is many emails. Check how each group will read it before you send.</p>
+</header>
+<main>
+  <form id="form">
+    <div class="tabs" role="tablist">
+      <button type="button" id="tab-person" class="on">One person</button>
+      <button type="button" id="tab-list">A list (segments)</button>
+    </div>
+
+    <div class="actions examples">
+      <span class="hint" style="font-size:13px">Try an example:</span>
+      <button type="button" data-example="price">Price increase</button>
+      <button type="button" data-example="winback">Win-back</button>
+      <button type="button" data-example="cold">Cold email</button>
+    </div>
+
+    <section class="card">
+      <h2>1 · Your email</h2>
+      <div class="row">
+        <div class="field">
+          <label for="message_type">Message type</label>
+          <select id="message_type">
+            <option value="customer">To customers (update, offer, reminder)</option>
+            <option value="cold">Cold first touch</option>
+            <option value="follow_up">Follow-up</option>
+            <option value="warm">Warm / referral</option>
+            <option value="post_meeting">After a meeting</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="channel">Channel</label>
+          <select id="channel">
+            <option value="email">Email</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label for="subject">Subject <span class="hint">(optional)</span></label><input id="subject"></div>
+      <div class="field"><label for="text">Message</label><textarea id="text" required placeholder="Paste the draft here."></textarea></div>
+    </section>
+
+    <section class="card" id="list-card">
+      <h2>2 · Who's on the list</h2>
+      <p class="small" style="margin:-6px 0 12px">Split the list by facts you already have: how long they've been customers, last visit, plan, payment history.</p>
+      <div class="csvbox" id="csv-drop">
+        <div class="csvrow">
+          <label class="filebtn">Upload customer list<input type="file" id="csv-file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label>
+          <button type="button" id="csv-sample">Use sample list</button>
+          <button type="button" class="primary" id="csv-go" disabled>Auto-segment</button>
+        </div>
+        <div class="small">CSV or Excel (.xlsx). Drop a file here, <button type="button" class="link" id="csv-paste-toggle" style="font-size:12px">paste CSV text</button>, or add segments by hand below. Claude sees only column summaries; names, emails, and phone numbers are never sent.</div>
+        <div class="small" id="csv-status" style="font-weight:600"></div>
+        <textarea id="csv-paste" hidden placeholder="Paste CSV here, header row first: customer_id,move_in_date,rate_type,..." style="margin-top:8px;min-height:90px"></textarea>
+      </div>
+      <div id="segments"></div>
+      <button type="button" class="link" id="add-seg">+ Add segment</button>
+    </section>
+
+    <section class="card" id="person-card" hidden>
+      <h2>2 · Who it's for</h2>
+      <div class="row">
+        <div class="field"><label for="name">Name</label><input id="name" placeholder="Dana Lee"></div>
+        <div class="field"><label for="role">Role</label><input id="role" placeholder="Owner"></div>
+      </div>
+      <div class="field"><label for="company">Company</label><input id="company" placeholder="Northside Remodeling"></div>
+      <div class="field">
+        <label for="website">Company website <span class="hint">(optional, public business site only)</span></label>
+        <div class="csvrow" style="flex-wrap:nowrap">
+          <input id="website" placeholder="northsideremodeling.com" inputmode="url">
+          <button type="button" id="site-read" style="white-space:nowrap">Read site</button>
+        </div>
+        <div class="small" id="site-status">Send Check reads the page when you check the draft. Social profiles aren't read: paste what you need below.</div>
+      </div>
+      <div class="field">
+        <label for="context">What you know about them <span class="hint">(public work posts, bio, CRM notes)</span></label>
+        <textarea id="context" placeholder="Work-related only."></textarea>
+      </div>
+    </section>
+
+
+    <section class="card">
+      <details>
+        <summary>Sounds like you? <span class="hint">(optional)</span></summary>
+        <label for="samples">Paste 2–3 emails you've actually sent <span class="hint">(a line with --- between them)</span></label>
+        <textarea id="samples" style="min-height:120px"></textarea>
+      </details>
+    </section>
+
+    <div class="actions" style="margin-top:16px">
+      <button type="submit" class="primary" id="go">Check draft</button>
+      <span class="hint" style="font-size:13px" id="go-hint">Checks your email against every group on the list.</span>
+    </div>
+  </form>
+
+  <section class="result">
+    <div class="card" id="out"><div class="empty">1. Write your email.<br>2. Add who it's for: one person, or a whole list.<br>3. Press <b>Check draft</b>.<br><br>Or try an example at the top.</div></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const LABELS = { slop: "Sounds human", personalization: "Speaks to their situation",
+                 recipient_fit: "Right offer and framing", mechanics: "Length & ask" };
+const PERSON_LABELS = { ...LABELS, personalization: "Personalization", recipient_fit: "Fits this recipient" };
+let mode = "person";
+let lastScore = null;
+
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const color = (n) => n >= 75 ? "var(--send)" : n >= 45 ? "var(--fix)" : "var(--scrap)";
+
+// ---- mode tabs ----
+function setMode(m) {
+  mode = m;
+  $("tab-list").classList.toggle("on", m === "list");
+  $("tab-person").classList.toggle("on", m === "person");
+  $("list-card").hidden = m !== "list";
+  $("person-card").hidden = m !== "person";
+  $("go-hint").textContent = m === "list" ? "Checks your email against every group on the list."
+                                          : "Checks your email against this person.";
+}
+$("tab-list").onclick = () => setMode("list");
+$("tab-person").onclick = () => setMode("person");
+
+// ---- segment editor ----
+function addSegment(seg = {}) {
+  const div = document.createElement("div");
+  div.className = "seg";
+  div.innerHTML = `<div class="seg-head">
+      <input class="s-label" placeholder="Segment, e.g. 10-year tenants" value="${esc(seg.label)}">
+      <input class="s-size" type="number" min="0" placeholder="How many" value="${seg.size ?? ""}">
+      <button type="button" title="Remove segment">×</button>
+    </div>
+    <textarea class="s-facts" placeholder="Facts you have: tenure, last visit, plan, what they pay, payment history, past agreements">${esc(seg.facts)}</textarea>
+    ${seg.why ? `<div class="why">Why this group: ${esc(seg.why)}</div>` : ""}`;
+  div.querySelector("button").onclick = () => div.remove();
+  $("segments").appendChild(div);
+}
+$("add-seg").onclick = () => addSegment();
+
+// ---- company website ----
+$("site-read").onclick = async () => {
+  const url = $("website").value.trim();
+  if (!url) { $("site-status").textContent = "Enter the company's website first."; return; }
+  const btn = $("site-read");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Reading…';
+  try {
+    const res = await fetch("/api/fetch_site", { method: "POST", headers: { "Content-Type": "application/json" },
+                                                 body: JSON.stringify({ url }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `server returned ${res.status}`);
+    $("site-status").textContent = `Read "${data.title || data.url}" (${data.chars.toLocaleString()} characters): ${data.preview}…`;
+  } catch (e) {
+    $("site-status").textContent = `Couldn't read it: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Read site";
+  }
+};
+
+// ---- CSV auto-segmentation ----
+let csvText = "", xlsxB64 = "", csvName = "";
+function csvReady({ text = "", xlsx = "", name }) {
+  csvText = text;
+  xlsxB64 = xlsx;
+  csvName = name;
+  const count = text ? `${Math.max(0, text.trim().split(/\r?\n/).length - 1)} customers` : "Excel file";
+  $("csv-status").textContent = `${name}: ${count} loaded. Paste the draft, then press Auto-segment.`;
+  $("csv-go").disabled = false;
+}
+function toBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
+async function loadFile(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".xls") || name.endsWith(".numbers")) {
+    $("csv-status").textContent = `${file.name}: save it as .xlsx or CSV first (File > Save As or Export).`;
+    return;
+  }
+  if (name.endsWith(".xlsx")) csvReady({ xlsx: toBase64(await file.arrayBuffer()), name: file.name });
+  else csvReady({ text: await file.text(), name: file.name });
+}
+$("csv-file").onchange = (e) => e.target.files[0] && loadFile(e.target.files[0]);
+const drop = $("csv-drop");
+drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", (e) => {
+  e.preventDefault();
+  drop.classList.remove("over");
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+$("csv-paste-toggle").onclick = () => { $("csv-paste").hidden = false; $("csv-paste").focus(); };
+$("csv-paste").oninput = (e) => e.target.value.trim() && csvReady({ text: e.target.value, name: "Pasted list" });
+$("csv-sample").onclick = async () => {
+  const res = await fetch("/api/sample_csv");
+  csvReady({ text: await res.text(), name: "cascade-storage-customers.csv (synthetic)" });
+};
+$("csv-go").onclick = async () => {
+  if (!$("text").value.trim()) {
+    $("csv-status").textContent = "First write or paste your email in step 1 above (or try an example). The groups depend on what the email says.";
+    $("text").scrollIntoView({ behavior: "smooth", block: "center" });
+    $("text").focus();
+    return;
+  }
+  const btn = $("csv-go");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Finding segments…';
+  try {
+    const res = await fetch("/api/segment_csv", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ csv_text: csvText, xlsx_base64: xlsxB64, text: $("text").value, subject: $("subject").value }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `server returned ${res.status}`);
+    if (!data.segments.length) throw new Error(data.notes || "no segments found");
+    $("segments").innerHTML = "";
+    data.segments.forEach(addSegment);
+    const skipped = data.columns_skipped.length ? ` Kept private: ${data.columns_skipped.join(", ")}.` : "";
+    $("csv-status").textContent = `${data.segments.length} segments from ${data.rows} customers in ${csvName}. Edit them below if needed.${skipped}`;
+  } catch (e) {
+    $("csv-status").textContent = `Couldn't segment the CSV: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Auto-segment";
+  }
+};
+const segments = () => [...document.querySelectorAll(".seg")].map((d) => ({
+  label: d.querySelector(".s-label").value.trim(),
+  size: parseInt(d.querySelector(".s-size").value || "0", 10),
+  facts: d.querySelector(".s-facts").value.trim(),
+})).filter((s) => s.label);
+
+// ---- requests ----
+function base() {
+  return {
+    text: $("text").value, subject: $("subject").value, channel: $("channel").value,
+    message_type: $("message_type").value,
+    owner_samples: $("samples").value.split(/^\s*---\s*$/m).map((s) => s.trim()).filter(Boolean),
+  };
+}
+
+async function run(previous = null) {
+  const btn = $("go");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Checking…';
+  try {
+    const listMode = mode === "list";
+    if (listMode && !segments().length) throw new Error("add at least one segment");
+    const body = listMode ? { ...base(), segments: segments() }
+      : { ...base(), recipient: { name: $("name").value, role: $("role").value, company: $("company").value,
+                                  context: $("context").value, website: $("website").value } };
+    const res = await fetch(listMode ? "/api/score_list" : "/api/score", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) throw new Error(`server returned ${res.status}`);
+    const data = await res.json();
+    listMode ? renderList(data) : renderPerson(data, previous);
+  } catch (e) {
+    $("out").innerHTML = `<div class="empty">Couldn't check this draft: ${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Check draft";
+  }
+}
+
+// ---- rendering ----
+const dimHtml = (d, labels) => `<div class="dim">
+    <div class="dim-head"><span>${labels[d.name] || d.name}</span><span>${d.score}</span></div>
+    <div class="bar"><span style="width:${d.score}%;background:${color(d.score)}"></span></div>
+    ${d.evidence.length ? `<ul>${d.evidence.slice(0, 4).map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
+    ${d.suggestion ? `<div class="tip">→ ${esc(d.suggestion)}</div>` : ""}
+  </div>`;
+const notesHtml = (notes) => notes.length ? `<ul class="notes">${notes.map((n) =>
+    `<li class="${n.startsWith("blocks send") ? "" : "info"}">${esc(n)}</li>`).join("")}</ul>` : "";
+const splitNotes = (card) => card.notes ? card.notes.split(" | ") : [];
+
+function renderList(data) {
+  const results = data.segments;
+  // Notes and draft-level scores are the same for every segment: show them once.
+  const noteSets = results.map((r) => splitNotes(r.scorecard));
+  const shared = noteSets[0].filter((n) => noteSets.every((s) => s.includes(n)));
+  const first = results[0].scorecard.dimensions;
+  const draftDims = first.filter((d) => d.name === "slop" || d.name === "mechanics");
+
+  let html = `<div class="verdict ${data.verdict}">
+      <span class="badge">${data.verdict.toUpperCase()}</span><span><b>${data.score}</b>/100</span>
+      <span class="summary">${esc(data.summary)}</span></div>`;
+  html += notesHtml(shared);
+  html += `<h2 class="block-title">Each group on the list</h2>`;
+  html += results.map((r, i) => {
+    const c = r.scorecard;
+    const dims = c.dimensions.filter((d) => d.name === "personalization" || d.name === "recipient_fit");
+    const own = splitNotes(c).filter((n) => !shared.includes(n));
+    return `<div class="segcard">
+      <div class="segcard-head">
+        <span class="name">${esc(r.segment.label)}</span>
+        ${r.segment.size ? `<span class="size">${r.segment.size} people</span>` : ""}
+        <span class="pill ${c.verdict}">${c.verdict.toUpperCase()} · ${c.score}</span>
+      </div>
+      ${notesHtml(own)}
+      ${dims.map((d) => dimHtml(d, LABELS)).join("")}
+      ${c.suggested_fix ? `<details><summary>Version for this group</summary>
+          <div class="fixbox" id="fix-${i}">${esc(c.suggested_fix)}</div>
+          <div class="actions" style="margin-top:8px"><button type="button" data-copy="${i}">Copy</button></div>
+        </details>` : ""}
+    </div>`;
+  }).join("");
+  html += `<h2 class="block-title">The draft itself (same for everyone)</h2>`;
+  html += draftDims.map((d) => dimHtml(d, LABELS)).join("");
+  html += `<div class="small">Approve a version before you use it. Nothing is sent.</div>`;
+  $("out").innerHTML = html;
+  document.querySelectorAll("[data-copy]").forEach((b) => b.onclick = async () => {
+    await navigator.clipboard.writeText(results[+b.dataset.copy].scorecard.suggested_fix);
+    b.textContent = "Copied";
+  });
+}
+
+function renderPerson(card, previous) {
+  lastScore = card.score;
+  const delta = previous !== null ? `<span class="delta">was ${previous}/100</span>` : "";
+  let html = `<div class="verdict ${card.verdict}">
+      <span class="badge">${card.verdict.toUpperCase()}</span><span><b>${card.score}</b>/100</span>${delta}</div>`;
+  html += notesHtml(splitNotes(card));
+  html += card.dimensions.map((d) => dimHtml(d, PERSON_LABELS)).join("");
+  if (card.suggested_fix) {
+    html += `<h2 class="block-title">Suggested fix (approve before use)</h2>
+      <div class="fixbox">${esc(card.suggested_fix)}</div>
+      <div class="actions" style="margin-top:10px">
+        <button class="primary" type="button" id="approve">Approve &amp; re-check</button>
+        <button type="button" id="copy">Copy</button>
+      </div>
+      <div class="small">Approving puts the fix in the message box and checks it again. Nothing is sent.</div>`;
+  }
+  $("out").innerHTML = html;
+  if (card.suggested_fix) {
+    $("approve").onclick = () => { $("text").value = card.suggested_fix; run(lastScore); };
+    $("copy").onclick = async () => { await navigator.clipboard.writeText(card.suggested_fix); $("copy").textContent = "Copied"; };
+  }
+}
+
+$("form").addEventListener("submit", (e) => { e.preventDefault(); run(); });
+
+// ---- examples (fictional businesses from corpus/fixtures) ----
+const EXAMPLES = {
+  price: {
+    mode: "list", type: "customer", subject: "Important update about your storage rate",
+    text: "Hi,\n\nDue to rising operating costs, including insurance, utilities, and property taxes, we will be increasing rates by 12% effective December 1, 2026.\n\nWe know price increases are never welcome, but our costs have gone up significantly and we can no longer absorb them.\n\nThank you for your understanding.\n\nCascade Self Storage Management",
+    segments: [
+      { label: "Month-to-month renters", size: 140, facts: "Renting under 6 months, month-to-month, standard rate, no prior rate changes" },
+      { label: "10-year tenants", size: 60, facts: "Continuous rental for 10+ years, never missed a payment, paying the standard rate" },
+      { label: "Negotiated-rate customers", size: 90, facts: "Negotiated a discounted rate in writing last year; rate agreement on file" },
+      { label: "Commercial units", size: 50, facts: "Small businesses renting commercial units, invoiced monthly, pay by company card or ACH" },
+    ],
+  },
+  winback: {
+    mode: "list", type: "customer", subject: "We miss you and your pup!",
+    text: "It's been a while! Come back and see us. Book this month and get $10 off any groom.\n\nWe've missed you!\n\nLakeview Pet Grooming",
+    segments: [
+      { label: "Lapsed 3 months", size: 180, facts: "Booked every 6 weeks for 2+ years; last visit 3 months ago; pet names and service history on file" },
+      { label: "Lapsed 14 months", size: 130, facts: "Regular until 14 months ago; last visit 14 months ago; average groom $85" },
+      { label: "Groupon one-timers", size: 100, facts: "Visited once with a Groupon deal; never booked at full price" },
+    ],
+  },
+  cold: {
+    mode: "person", type: "cold", subject: "Quick question",
+    name: "Dana Lee", role: "Owner", company: "Northside Remodeling",
+    context: "Runs a 14-person remodeling firm in Seattle. Recent public post: \"Lost two jobs this month because our crew schedules got crossed on the Fremont kitchen remodel. Spreadsheets aren't cutting it anymore.\"",
+    text: "Hi Dana,\n\nI hope this email finds you well. I came across your profile and was impressed by your work at Northside Remodeling.\n\nWe help companies like yours leverage our cutting-edge AI-powered solution to unlock growth. Our platform streamlines scheduling, and our team has years of experience.\n\nWould you be open to a quick call? Are you the right person to speak to about this? Let me know if this resonates!\n\nBest regards,\nSam",
+  },
+};
+
+document.querySelectorAll("[data-example]").forEach((b) => b.onclick = () => {
+  const ex = EXAMPLES[b.dataset.example];
+  setMode(ex.mode);
+  $("message_type").value = ex.type;
+  $("subject").value = ex.subject;
+  $("text").value = ex.text;
+  if (ex.segments) {
+    $("segments").innerHTML = "";
+    ex.segments.forEach(addSegment);
+  } else {
+    ["name", "role", "company", "context"].forEach((k) => $(k).value = ex[k]);
+  }
+});
+
+addSegment();
+addSegment();
+setMode("person");
+$("message_type").value = "cold";
+</script>
+</body>
+</html>
