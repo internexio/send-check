@@ -26,8 +26,24 @@ SAMPLE_CSV = (Path(__file__).resolve().parents[1]
               / "corpus" / "fixtures" / "data" / "cascade-storage-customers.csv")
 
 load_env()
-app = FastAPI(title="Send Check")
+# No public API docs: the page is the only client.
+app = FastAPI(title="Send Check", docs_url=None, redoc_url=None, openapi_url=None)
 backend = NaiveBackend()
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    return response
+
+
+def require_draft(text: str) -> None:
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="Paste the email first, then check it.")
 
 
 class RecipientIn(BaseModel):
@@ -156,6 +172,7 @@ def fetch_site(req: SiteRequest) -> dict:
 
 @app.post("/api/score")
 def score(req: ScoreRequest) -> dict:
+    require_draft(req.text)
     r = req.recipient
     context, site_note = r.context, ""
     if r.website.strip():
@@ -180,6 +197,7 @@ def score(req: ScoreRequest) -> dict:
 
 @app.post("/api/score_list")
 def score_list(req: ListRequest) -> dict:
+    require_draft(req.text)
     result = score_segments(
         backend,
         Draft(text=req.text, channel=req.channel, subject=req.subject),
