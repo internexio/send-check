@@ -39,6 +39,8 @@ uv run python -m web.app    # open http://localhost:8000
    - **A list:** upload a customer list (CSV or Excel), drop it on the box, or paste it, then press **Auto-segment**. Or add segments by hand. A synthetic 340-customer sample list is built in.
 3. **Check draft.** You get the verdict per segment, the evidence, and a suggested version for each group that needs one.
 
+Save **Your profile** once (name, company, signature, what your business offers, a few emails you've sent). It stays in your browser, and every check uses it: suggested fixes end with your exact signature and cite only the facts you gave, and "sounds like you" uses your saved emails.
+
 Without an API key, the page still scores generic phrasing, style, and length, and estimates the rest.
 
 ### The Claude plugin

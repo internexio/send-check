@@ -7,6 +7,7 @@ script-only estimates and the Scorecard says so in notes.
 from __future__ import annotations
 
 import os
+import re
 
 from scorers.base import DimensionScore, Draft, Recipient, Scorecard, verdict_from_score
 from scorers.naive import mechanical, slop, voice
@@ -29,18 +30,21 @@ class NaiveBackend:
     name = "naive"
 
     def score(self, draft: Draft, recipient: Recipient, message_type: str = "cold",
-              owner_samples: list[str] | None = None, audience: str = "person") -> Scorecard:
+              owner_samples: list[str] | None = None, audience: str = "person",
+              sender: dict | None = None) -> Scorecard:
         """audience is "person" (one recipient) or "segment" (a group on a send
-        list, see scorers/segments.py)."""
+        list, see scorers/segments.py). sender is the sender's saved profile:
+        name, company, signature, and facts about their business."""
         try:
-            return _score(draft, recipient, message_type, owner_samples or [], audience)
+            return _score(draft, recipient, message_type, owner_samples or [], audience,
+                          sender or {})
         except Exception as e:  # contract: never raise from score()
             return Scorecard(verdict="fix", score=0, dimensions=[], backend=self.name,
                              notes=f"scoring failed: {e}")
 
 
 def _score(draft: Draft, recipient: Recipient, message_type: str,
-           owner_samples: list[str], audience: str) -> Scorecard:
+           owner_samples: list[str], audience: str, sender: dict) -> Scorecard:
     context = " ".join(p for p in (recipient.role, recipient.context) if p)
     mech = mechanical.check(draft.text, message_type=message_type, recipient_context=context,
                             recipient_name=recipient.name, recipient_company=recipient.company)
@@ -51,6 +55,8 @@ def _score(draft: Draft, recipient: Recipient, message_type: str,
     disqualifying, reminders = mechanical.disqualifiers(
         draft.text, draft.subject, message_type,
         merge_fields_ok=audience == "segment" or message_type == "customer")
+    if sender and not _signed(draft.text, sender):
+        reminders.append("not signed with your saved signature; add it before sending (suggested fixes include it)")
     sl = slop.check(draft.text)
     vc = voice.compare(draft.text, owner_samples) if owner_samples else None
 
@@ -73,6 +79,7 @@ def _score(draft: Draft, recipient: Recipient, message_type: str,
                 "script_results": {"mechanical": mech, "slop": sl, "voice": vc, "caps": caps,
                                    "disqualifying": disqualifying},
                 "owner_samples": owner_samples,
+                "sender": sender or None,
             })
         except Exception as e:
             reason = ("no Claude API key found; add ANTHROPIC_API_KEY to .env"
@@ -154,11 +161,30 @@ def _score(draft: Draft, recipient: Recipient, message_type: str,
 
     verdict = verdict_from_score(overall)
     fix = judgment.suggested_fix if judgment and verdict == "fix" else ""
+    if fix and sender.get("signature"):
+        fix = _with_signature(fix, sender["signature"])
     if judgment and verdict == "scrap" and judgment.missing:
         notes.append(f"what it needs: {judgment.missing}")
 
     return Scorecard(verdict=verdict, score=overall, dimensions=dimensions,
                      suggested_fix=fix, backend="naive", notes=" | ".join(notes))
+
+
+def _signed(text: str, sender: dict) -> bool:
+    """Whether the draft's closing lines carry the sender's name or signature."""
+    tail = " ".join(text.strip().splitlines()[-5:]).lower()
+    marks = [sender.get("name", "").split(" ")[0], sender.get("company", "")]
+    return any(len(m.strip()) > 1 and m.strip().lower() in tail for m in marks)
+
+
+def _with_signature(fix: str, signature: str) -> str:
+    """Make sure a suggested fix ends with the sender's exact signature."""
+    if " ".join(signature.split()) in " ".join(fix.split()):
+        return fix
+    lines = fix.rstrip().splitlines()
+    while lines and re.fullmatch(r"\s*\[[^\]]+\]\s*", lines[-1]):   # e.g. [Your Name]
+        lines.pop()
+    return "\n".join(lines).rstrip() + "\n\n" + signature.strip()
 
 
 def _clamp(n: int) -> int:

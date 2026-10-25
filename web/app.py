@@ -40,6 +40,22 @@ class RecipientIn(BaseModel):
 MessageType = Literal["cold", "follow_up", "warm", "post_meeting", "customer"]
 
 
+class SenderIn(BaseModel):
+    """The sender's saved profile. Kept in the browser; sent with each check."""
+    name: str = ""
+    title: str = ""
+    company: str = ""
+    website: str = ""
+    phone: str = ""
+    email: str = ""
+    signature: str = ""
+    about: str = ""            # what they sell and results they can honestly cite
+
+    def as_dict(self) -> dict | None:
+        d = {k: v.strip() for k, v in self.model_dump().items() if v.strip()}
+        return d or None
+
+
 class ScoreRequest(BaseModel):
     text: str
     subject: str = ""
@@ -47,6 +63,7 @@ class ScoreRequest(BaseModel):
     message_type: MessageType = "cold"
     recipient: RecipientIn = RecipientIn()
     owner_samples: list[str] = []
+    sender: SenderIn = SenderIn()
 
 
 class SegmentIn(BaseModel):
@@ -62,6 +79,7 @@ class ListRequest(BaseModel):
     message_type: MessageType = "customer"
     segments: list[SegmentIn]
     owner_samples: list[str] = []
+    sender: SenderIn = SenderIn()
 
 
 class CsvRequest(BaseModel):
@@ -132,6 +150,7 @@ def score(req: ScoreRequest) -> dict:
                   source_url=r.website.strip()),
         message_type=req.message_type,
         owner_samples=[s for s in req.owner_samples if s.strip()],
+        sender=req.sender.as_dict(),
     )
     if site_note:
         card.notes = " | ".join(n for n in (site_note, card.notes) if n)
@@ -146,6 +165,7 @@ def score_list(req: ListRequest) -> dict:
         [Segment(**s.model_dump()) for s in req.segments],
         message_type=req.message_type,
         owner_samples=[s for s in req.owner_samples if s.strip()],
+        sender=req.sender.as_dict(),
         audience="segment",
     )
     return asdict(result)
