@@ -1,3 +1,5 @@
+<img src=".claude-plugin/icon.png" alt="Send Check logo" width="96">
+
 # Send Check
 
 **The missing skill: 44 skills in Claude for Small Business write for you. None of them score whether you should send it.**
