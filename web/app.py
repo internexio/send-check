@@ -9,7 +9,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
 
@@ -95,10 +95,24 @@ def page() -> str:
     return PAGE.read_text(encoding="utf-8")
 
 
-@app.get("/favicon.ico", include_in_schema=False)
+STATIC = Path(__file__).resolve().parent / "static"
+
+
+@app.get("/logo.png", include_in_schema=False)
 @app.get("/favicon.png", include_in_schema=False)
-def favicon() -> FileResponse:
+def logo() -> FileResponse:
     return FileResponse(ICON, media_type="image/png")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> FileResponse:
+    return FileResponse(STATIC / "favicon.ico", media_type="image/x-icon")
+
+
+@app.get("/favicon-32.png", include_in_schema=False)
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+def favicon_png(request: Request) -> FileResponse:
+    return FileResponse(STATIC / request.url.path.lstrip("/"), media_type="image/png")
 
 
 @app.get("/api/sample_csv", response_class=PlainTextResponse)
