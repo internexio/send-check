@@ -68,7 +68,12 @@
   .filebtn { display: inline-block; margin: 0; font-size: 15px; font-weight: 600; border: 1px solid var(--line);
              border-radius: 8px; padding: 9px 15px; cursor: pointer; background: var(--card); }
   .seg input { background: var(--card); }
-  .result { position: sticky; top: 16px; }
+  .result { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; }
+  @media (max-width: 860px) { .result { position: static; max-height: none; overflow: visible; } }
+  #check-actions { position: sticky; bottom: 0; z-index: 2; background: var(--bg); padding: 12px 0;
+                   border-top: 1px solid var(--line); margin-top: 16px; }
+  .working { color: var(--muted); text-align: center; padding: 48px 12px; }
+  .working b { color: var(--ink); }
   .empty { color: var(--muted); text-align: center; padding: 48px 12px; }
   .verdict { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 10px; flex-wrap: wrap; }
   .verdict .badge { font-size: 26px; font-weight: 800; letter-spacing: 0.04em; }
@@ -118,10 +123,10 @@
 </header>
 <main>
   <form id="form">
-    <div class="tabs" role="tablist">
-      <button type="button" id="tab-person" class="on">One person</button>
-      <button type="button" id="tab-list">A list (segments)</button>
-      <button type="button" id="tab-profile">Your profile</button>
+    <div class="tabs" role="tablist" aria-label="What to check">
+      <button type="button" role="tab" id="tab-person" class="on" aria-selected="true">One person</button>
+      <button type="button" role="tab" id="tab-list" aria-selected="false">A list (segments)</button>
+      <button type="button" role="tab" id="tab-profile" aria-selected="false">Your profile</button>
     </div>
 
     <section class="card" id="profile-card" hidden>
@@ -239,7 +244,7 @@
   </form>
 
   <section class="result">
-    <div class="card" id="out"><div class="empty">1. Write your email.<br>2. Add who it's for: one person, or a whole list.<br>3. Press <b>Check draft</b>.<br><br>Or try an example at the top.</div></div>
+    <div class="card" id="out" aria-live="polite"><div class="empty">1. Write your email.<br>2. Add who it's for: one person, or a whole list.<br>3. Press <b>Check draft</b>.<br><br>Or try an example at the top.</div></div>
   </section>
 </main>
 
@@ -262,6 +267,7 @@ function setMode(m) {
   $("tab-list").classList.toggle("on", m === "list");
   $("tab-person").classList.toggle("on", m === "person");
   $("tab-profile").classList.toggle("on", m === "profile");
+  ["person", "list", "profile"].forEach((k) => $("tab-" + k).setAttribute("aria-selected", String(m === k)));
   $("list-card").hidden = m !== "list";
   $("person-card").hidden = m !== "person";
   $("profile-card").hidden = m !== "profile";
@@ -446,6 +452,9 @@ async function run(previous = null) {
   try {
     const listMode = mode === "list";
     if (listMode && !segments().length) throw new Error("add at least one segment");
+    $("out").innerHTML = `<div class="working"><span class="spinner"></span><b>Checking your draft.</b><br>` +
+      `Reading it against ${listMode ? "each group" : "this person"}. This can take up to a minute.</div>`;
+    $("out").scrollIntoView({ behavior: "smooth", block: "nearest" });
     const body = listMode ? { ...base(), segments: segments() }
       : { ...base(), recipient: { name: $("name").value, role: $("role").value, company: $("company").value,
                                   context: $("context").value, website: $("website").value } };
@@ -454,6 +463,8 @@ async function run(previous = null) {
     if (!res.ok) throw new Error(`server returned ${res.status}`);
     const data = await res.json();
     listMode ? renderList(data) : renderPerson(data, previous);
+    $("out").closest(".result").scrollTop = 0;
+    $("out").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
     $("out").innerHTML = `<div class="empty">Couldn't check this draft: ${esc(e.message)}</div>`;
   } finally {
