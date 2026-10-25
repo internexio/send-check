@@ -37,6 +37,13 @@ results are in the request. Your job is the part a script cannot do:
   flagged issue in the script results and your own evidence. Empty string if the
   draft needs no changes or is beyond patching.
 - missing: one sentence on what the draft most lacks (empty if nothing)
+- headline_problem: the single biggest problem, as one plain sentence of at most
+  15 words, naming the fact it rests on (empty if there is no real problem)
+- headline_strength: the single best thing about the draft for this reader, one
+  plain sentence of at most 15 words
+
+Keep it crisp: at most 3 evidence items per dimension, each under 20 words, and
+each suggestion one short sentence.
 
 Every evidence item is an exact quote from the draft or a script finding.
 Never invent facts about the recipient or the sender. Write evidence and
@@ -80,6 +87,8 @@ class Judgment(BaseModel):
     disqualifying: list[DisqualifyingTell]
     suggested_fix: str
     missing: str
+    headline_problem: str
+    headline_strength: str
 
 
 def judge(request: dict) -> Judgment:

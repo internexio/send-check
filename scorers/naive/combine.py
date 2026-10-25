@@ -24,6 +24,15 @@ TIER = {"cold": "cold", "follow_up": "cold"}                 # everything else: 
 SEND_LINE = {"cold": 82, "client": 75}                       # 23 of 28, 21 of 28
 TEMPLATE_TELL_ALLOWANCE = {"cold": 1, "client": 2}
 STRUCTURE_TELLS = {"uniform_paragraphs", "uniform_sentences", "three_bullets"}
+# Plain-language names for disqualifying tells, for the one-line reason
+DISQUALIFIER_LABEL = {
+    "B9": "Unfilled merge field", "P20a": "Leftover AI assistant text",
+    "P21": "AI cutoff disclaimer", "B8": "Fake \"Re:\" on a first message",
+    "B16": "Markdown symbols will show in the email",
+    "B11": "Flattery is the only personal touch",
+    "B12": "An \"I noticed\" claim with nothing checkable",
+    "B24": "No concrete details at all", "B25": "Nothing a competitor couldn't send",
+}
 
 
 class NaiveBackend:
@@ -166,8 +175,30 @@ def _score(draft: Draft, recipient: Recipient, message_type: str,
     if judgment and verdict == "scrap" and judgment.missing:
         notes.append(f"what it needs: {judgment.missing}")
 
+    notes.insert(0, "reason: " + _reason(verdict, disqualifying, judgment, recipient_fit,
+                                          caps, sl, other))
     return Scorecard(verdict=verdict, score=overall, dimensions=dimensions,
                      suggested_fix=fix, backend="naive", notes=" | ".join(notes))
+
+
+def _reason(verdict, disqualifying, judgment, recipient_fit, caps, sl, other) -> str:
+    """One plain line, shown right under the score: why this verdict."""
+    if disqualifying:
+        d = disqualifying[0]
+        label = DISQUALIFIER_LABEL.get(d["id"], d["tell"])
+        return f'{label}: "{d["span"]}"' if d["span"] else label
+    if verdict == "send":
+        return (judgment.headline_strength if judgment and judgment.headline_strength
+                else "Specific, clear, and right for this reader")
+    if judgment and recipient_fit.score < MISMATCH_FIT:
+        return judgment.headline_problem or "Wrong offer or framing for this reader"
+    if judgment and judgment.headline_problem:
+        return judgment.headline_problem
+    if caps:
+        return caps[0][0].upper() + caps[0][1:]
+    if sl["matches"]:
+        return f'Reads like a template: "{sl["matches"][0]["phrase"]}"'
+    return other[0]["detail"].capitalize() if other else "Needs a closer fit to the reader"
 
 
 def _signed(text: str, sender: dict) -> bool:
