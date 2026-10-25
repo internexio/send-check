@@ -1,43 +1,102 @@
 ---
 name: send-check
 description: >
-  Score a drafted outreach message (cold email, LinkedIn note, proposal cover)
-  against the person who will receive it, before it is sent. Use when the user
-  asks to check, score, review, or vet a draft, or asks "should I send this".
-  Returns a verdict (send / fix / scrap), per-dimension scores with evidence,
-  and a suggested fix the user can approve. Measurement only: this skill never
-  sends anything and never changes a draft without showing the change.
+  Scores a drafted outreach message (cold email, follow-up, LinkedIn note,
+  proposal cover) against the person who will receive it, before it is sent.
+  Returns a verdict (send / fix / scrap), per-dimension scores with evidence
+  quoted from the draft, and a fit-checked suggested fix the user can approve.
+  Use when the user asks to check, score, review, or vet a draft, or asks
+  "should I send this", "is this any good", "does this sound like AI". Also
+  use automatically, without being asked, right after any outreach message is
+  drafted in the conversation (including by outreach-composer), before the
+  draft is presented. Measurement only: never sends anything and never changes
+  a draft without showing the change.
 ---
 
 # Send Check
 
-You are the quality gate between "AI drafted it" and "it got sent."
+You are the quality gate between "AI drafted it" and "it got sent." You
+measure and report. The owner decides.
 
-## Inputs to collect
+## When to run
 
-1. **The draft** — from the conversation, a paste, or a file
-2. **The recipient** — a LinkedIn URL, company site, or the user's own notes.
-   If a URL is given, fetch it and extract: name, role, company, and anything
-   that signals what this person cares about. If nothing is available, say the
-   recipient-fit dimension will be weak and proceed with the rest.
+- **Asked:** the user pastes or points to a draft and wants it checked.
+- **Automatically:** whenever an outreach message was just drafted in this
+  conversation, by you or another skill, score it before showing it as
+  finished. Show the draft and the scorecard together. If it scores "send",
+  keep the scorecard to the verdict line so the gate stays out of the way.
 
-## Scoring procedure
+## Step 1: Collect the inputs
 
-Run the pipeline (`python -m sendcheck.score`, or the API below) with the
-configured backend. Dimensions:
+1. **The draft:** from the conversation, a paste, or a file. Note the subject
+   line if there is one.
+2. **The recipient:** whatever the user has: pasted profile or bio text, CRM
+   notes, or a company website. Fetch a company website if given a URL. Do not
+   fetch LinkedIn URLs, since LinkedIn blocks automated access; ask the user to
+   paste the profile text instead. If there is no recipient information, say
+   recipient fit will not be measured and continue.
+3. **The message type:** cold, follow_up, warm, or post_meeting. Infer it from
+   the draft; default to cold.
 
-- **slop** — how distinguishable is this from template outreach?
-- **personalization** — does it show real knowledge of the recipient?
-- **recipient_fit** — does the message match what this person responds to?
+## Step 2: Run the deterministic checks
+
+Run `scripts/check.py` from this skill's directory, passing JSON on stdin:
+
+```bash
+python3 scripts/check.py <<'EOF'
+{"text": "<draft body>", "subject": "<subject>", "message_type": "cold",
+ "recipient_name": "<name>", "recipient_company": "<company>",
+ "recipient_context": "<everything known about the recipient>"}
+EOF
+```
+
+It returns generic-phrase matches, mechanical findings (length, you/I
+balance, ask count, AI style tells), which recipient details appear in the
+draft, and `caps`: issues that block a "send" verdict.
+
+If Python is not available, apply the same checks by reading
+`corpus/generic_openers.txt` at the plugin root and the rules in
+`reference/rubric.md`, and say the scores were measured without the script.
+
+## Step 3: Score
+
+Score every dimension with `reference/rubric.md`: slop, personalization,
+recipient_fit, mechanics. Every piece of evidence is either an exact quote
+from the draft or a finding from the script. Never paraphrase a quote.
+Combine into the overall score and verdict exactly as the rubric says.
+
+## Step 4: Write the suggested fix
+
+Skip this for "send". For "fix", write the suggested fix following the
+rubric, then fit-check it: run `scripts/check.py` on it and score it again.
+For "scrap", explain what is missing instead of patching.
 
 ## Output format
 
-Render the Scorecard exactly in this order:
+1. One line: **Verdict: SEND | FIX | SCRAP: {score}/100** (naive backend)
+2. A table: dimension, score, strongest piece of evidence
+3. For "fix": the suggested fix as a quoted block labeled **Suggested fix
+   (approve before use)**, followed by its own score, e.g. "Fix scores 82/100: send"
+4. One line on what changed and why
 
-1. One line: **Verdict: SEND | FIX | SCRAP — {score}/100** ({backend})
-2. Dimension table: name, score, strongest piece of evidence
-3. The suggested fix as a quoted block, labeled "Suggested fix (approve before use)"
-4. One line of what changed and why
+## Checking several drafts at once
 
-Never send, schedule, or post anything. Never apply the fix silently. The
-user approves; you measure.
+When given a batch (a sequence, a campaign, a folder of drafts), score each
+one, then lead with a summary line such as "20 drafts: 6 send, 11 fix,
+3 scrap" and a table of draft, verdict, score, and top issue. Write suggested
+fixes only for the drafts the user picks.
+
+## Rules
+
+- Never send, schedule, queue, or post anything.
+- Never apply the suggested fix silently. The user approves; you measure.
+- Never invent facts about the recipient or results the sender has not claimed.
+- Describe what Send Check does with measurement words: scores, measures,
+  flags, checks, diagnoses.
+
+## Reference files
+
+- `reference/rubric.md`: dimensions, bands, weights, caps, and fix rules
+- `scripts/check.py`: deterministic checks (standard-library Python)
+- `../../corpus/generic_openers.txt`: the generic-phrase list, with sources in
+  `../../corpus/ATTRIBUTION.md`
