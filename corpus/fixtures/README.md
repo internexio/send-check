@@ -1,6 +1,6 @@
 # Fixtures: synthetic test emails
 
-Twenty draft emails, one per use case in `docs/Send Check Use Cases.md`. Each is written the way a small-business owner writes it: one blast, the same text for every recipient. The businesses and people are fictional, so these are safe to commit. They are *not* the real emails in `corpus/samples/`.
+Twenty-one draft emails: one per use case in `docs/Send Check Use Cases.md`, plus #21, a travel-industry variant of #14. Each is written the way a small-business owner writes it: one blast, the same text for every recipient. The businesses and people are fictional, so these are safe to commit. They are *not* the real emails in `corpus/samples/`.
 
 Each file has the business, the recipient list, the subject, the draft, and the expected Send Check findings: the per-segment flags the verdict should surface, grounded in observable recipient facts. The drafts are *supposed* to contain the failure modes, so em-dashes, filler and generic openers in them are intentional.
 
@@ -26,11 +26,12 @@ Each file has the business, the recipient list, the subject, the draft, and the 
 | 18 | [Event / workshop / open-house invite](18-event-workshop-open-house-invite.md) | Operations, scheduling, and niche verticals |
 | 19 | [Nonprofit fundraising appeal](19-nonprofit-fundraising-appeal.md) | Operations, scheduling, and niche verticals |
 | 20 | [Hiring blast to past applicants](20-hiring-blast-to-past-applicants.md) | Operations, scheduling, and niche verticals |
+| 21 | [Tour operator apology sent to the whole past-guest list](21-tour-operator-apology-to-whole-guest-list.md) | Reputation and relationship |
 
 ## Using the fixtures
 
 - Each draft is a *should-flag* fixture except where noted: #9's this-week segment and #16 overall are the negative tests that keep Send Check from crying wolf.
 - Every expected flag traces to a recipient fact (tenure, payment history, usage, purchase or service history, thread state, role, list hygiene). No flag should need persona inference.
-- Severity anchors for scoring tests: #17 (double-booked accusation), #7 (upsell to premium) and #5 (blanket recall) are high severity. #16 is the low-severity anchor.
+- Severity anchors for scoring tests: #17 (double-booked accusation), #7 (upsell to premium) and #5 (blanket recall) are high severity. #16 is the low-severity anchor. #21 pairs with #14: same blast-to-everyone failure, travel vertical, with a recipient CSV at `data/saltwind-tours-guests.csv` (regenerate with `scripts/make_tour_csv.py`).
 
 Source: `docs/send-check-test-emails.md`, split one file per email.
