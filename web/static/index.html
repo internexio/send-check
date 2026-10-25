@@ -231,18 +231,11 @@
     </section>
 
 
-    <section class="card" id="voice-card">
-      <details>
-        <summary>Sounds like you? <span class="hint">(optional)</span></summary>
-        <label for="samples">Paste 2–3 emails you've actually sent <span class="hint">(a line with --- between them)</span></label>
-        <textarea id="samples" style="min-height:120px"></textarea>
-      </details>
-    </section>
-
     <div class="actions" style="margin-top:16px" id="check-actions">
       <button type="submit" class="primary" id="go">Check draft</button>
       <span class="hint" style="font-size:13px" id="go-hint">Checks your email against every group on the list.</span>
     </div>
+    <div class="small" id="voice-hint"></div>
   </form>
 
   <section class="result">
@@ -272,7 +265,7 @@ function setMode(m) {
   $("list-card").hidden = m !== "list";
   $("person-card").hidden = m !== "person";
   $("profile-card").hidden = m !== "profile";
-  ["examples-row", "draft-card", "voice-card", "check-actions"].forEach((id) => $(id).hidden = m === "profile");
+  ["examples-row", "draft-card", "check-actions", "voice-hint"].forEach((id) => $(id).hidden = m === "profile");
   $("go-hint").textContent = m === "list" ? "Checks your email against every group on the list."
                                           : "Checks your email against this person.";
 }
@@ -295,7 +288,10 @@ function showWho() {
     ? `Signed as <b>${esc(profile.name)}</b>${profile.company ? ", " + esc(profile.company) : ""} <button type="button" id="who-edit">Edit</button>`
     : `<button type="button" id="who-edit">Add your profile</button>`;
   $("who-edit").onclick = () => { fillProfileForm(); setMode("profile"); };
-  $("samples").placeholder = profile.samples ? "Leave empty to use the emails saved in your profile." : "";
+  const n = splitEmails(profile.samples || "").length;
+  $("voice-hint").innerHTML = n
+    ? `"Sounds like you" compares the draft with the ${n} email${n > 1 ? "s" : ""} saved in your profile.`
+    : `Add a few emails you've sent in <b>Your profile</b> to check the draft sounds like you.`;
 }
 function fillProfileForm() {
   PROFILE_FIELDS.forEach((k) => $("p-" + k).value = profile[k] || "");
@@ -437,8 +433,7 @@ function base() {
   return {
     text: $("text").value, subject: $("subject").value, channel: $("channel").value,
     message_type: $("message_type").value,
-    owner_samples: splitEmails($("samples").value).length ? splitEmails($("samples").value)
-                                                          : splitEmails(profile.samples || ""),
+    owner_samples: splitEmails(profile.samples || ""),
     sender: senderFields(),
   };
 }
