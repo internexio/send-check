@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
 
 from scorers.autosegment import autosegment, xlsx_to_csv
@@ -21,6 +21,7 @@ from scorers.segments import Segment, score_segments
 from scorers.website import WebsiteError, fetch_text
 
 PAGE = Path(__file__).resolve().parent / "static" / "index.html"
+ICON = Path(__file__).resolve().parents[1] / ".claude-plugin" / "icon.png"
 SAMPLE_CSV = (Path(__file__).resolve().parents[1]
               / "corpus" / "fixtures" / "data" / "cascade-storage-customers.csv")
 
@@ -92,6 +93,12 @@ class CsvRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 def page() -> str:
     return PAGE.read_text(encoding="utf-8")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+@app.get("/favicon.png", include_in_schema=False)
+def favicon() -> FileResponse:
+    return FileResponse(ICON, media_type="image/png")
 
 
 @app.get("/api/sample_csv", response_class=PlainTextResponse)
