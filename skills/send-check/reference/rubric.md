@@ -71,6 +71,54 @@ Start at 100 and deduct the points of every mechanical finding except
 `personalization`, `em_dash`, `uniform_paragraphs`, and `three_bullets`
 (those are counted above). Evidence: each finding's `detail`.
 
+## Disqualifying tells
+
+From the team's humanization rubric (`docs/humanization-rubric.md`, Part 4;
+IDs match it). Each one shows nobody checked the message, or that a claim of
+personal knowledge is false or empty. Any disqualifying tell caps the overall
+score at 30 (scrap), whatever else the draft does well. Quote the exact span.
+
+**Measured by the script** (`disqualifying` in its output):
+- B9: an unfilled merge field (`{FirstName}`, `[Company]`) in an email to one
+  person, or a greeting with the name missing ("Hi ,"). In a template sent to
+  a list, merge fields are expected and only produce a reminder.
+- P20a: leftover assistant text ("Certainly! Here's a draft", "I hope this
+  helps!", "Would you like me to adjust the tone?").
+- P21: an AI cutoff disclaimer ("As of my last update").
+- B8: "Re:" or "Fwd:" on the subject of a first message.
+- B16: markdown symbols (`**bold**`, `## heading`, backticks) in plain-text email.
+
+**Judged** (single recipient only, never for segments):
+- B11: unanchored flattery ("doing great things", "impressive growth") as the
+  only personalization in cold outreach.
+- B12: an "I noticed / I saw" claim in cold outreach that names no date,
+  document, post, event, or number.
+- B24: zero anchors in the body of a cold or client message. An anchor is a
+  number, a date or time, a named person (not in the greeting or sign-off), a
+  named artifact (order, ticket, file, post, invoice, job listing), or a named
+  place or event; the sender's own product name doesn't count.
+- B25: no body sentence passes the portability test: every sentence could be
+  sent unchanged by a competitor.
+
+Quoted text, signatures, and mandated wording (legal footers, opt-out lines)
+never count. When you can't decide whether an instance meets a definition, it
+doesn't count.
+
+## Pass lines by stakes
+
+The humanization rubric sets a higher bar for cold outreach than for client
+mail. Send Check applies it on top of the verdict thresholds:
+
+| Stakes | Message types | To get "send" | Template-tell allowance |
+|---|---|---|---|
+| Cold and public | cold, follow_up | overall 82 or higher (23 of 28) | at most 1 |
+| Client | customer, warm, post_meeting | overall 75 or higher (21 of 28) | at most 2 |
+
+A template tell here is a multi-word stock phrase from the phrase list (an
+opener, a wind-up, a stock closer) or an AI structure tell (uniform paragraphs
+or sentences, a three-bullet list). Going over the allowance, or under the cold
+pass line, caps the overall at 74 (fix).
+
 ## Segments: one message to many recipients
 
 A draft sent to a list is N messages: each group on the list reads it from

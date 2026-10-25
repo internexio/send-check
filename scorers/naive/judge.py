@@ -29,6 +29,10 @@ results are in the request. Your job is the part a script cannot do:
   adjust for word choice, register, and how the owner phrases an ask; otherwise null
 - over_personalized: true if the draft references the recipient's private life or
   anything the sender could not plausibly know (rubric: Over-personalization)
+- disqualifying: the judge-side disqualifying tells that fire, per the rubric's
+  "Disqualifying tells" section (B11, B12, B24, B25), each with its exact span.
+  Only for a single recipient ("audience" is "person"); empty for segments and
+  when none fire. When unsure, it doesn't fire.
 - suggested_fix: a revised draft following the rubric's fix rules, fixing every
   flagged issue in the script results and your own evidence. Empty string if the
   draft needs no changes or is beyond patching.
@@ -55,12 +59,19 @@ class JudgedDimension(BaseModel):
     suggestion: str
 
 
+class DisqualifyingTell(BaseModel):
+    id: str                    # B11, B12, B24, or B25 from docs/humanization-rubric.md
+    span: str                  # exact quote, or "" for B24/B25 (an absence)
+    reason: str
+
+
 class Judgment(BaseModel):
     personalization: JudgedDimension
     recipient_fit: JudgedDimension
     voice_adjusted: int | None
     over_personalized: bool
     over_personalization_evidence: list[str]
+    disqualifying: list[DisqualifyingTell]
     suggested_fix: str
     missing: str
 

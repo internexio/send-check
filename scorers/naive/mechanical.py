@@ -52,6 +52,60 @@ def count_contractions(text: str) -> tuple[int, int]:
     return len(CONTRACTION.findall(lower)), len(UNCONTRACTED.findall(lower))
 
 
+# Disqualifying tells from docs/humanization-rubric.md (Part 4): each shows
+# nobody checked the message before it went out. IDs match that rubric.
+MERGE_FIELD = re.compile(r"\{\{?\s*[A-Za-z_][\w .]*\}\}?|\[(?:[A-Z][\w']*(?: [A-Za-z#][\w']*){0,3})\]")
+# "Hi ," is a name that merged as blank; a plain "Hi," is a normal greeting
+EMPTY_GREETING = re.compile(r"^(hi|hello|hey|dear|good (?:morning|afternoon|evening))[ \t]+,", re.I | re.M)
+ASSISTANT_ARTIFACT = re.compile(
+    r"^\s*(?:certainly|sure|absolutely|of course)[!,.]?\s+here(?:'s| is)\b|"
+    r"\bhere(?:'s| is) (?:a|the|your) (?:draft|revised|rewritten|polished|version)\b|"
+    r"\bi hope this helps\b|\bwould you like me to\b|\blet me know if you(?:'d| would) like me to\b|"
+    r"\bas an ai\b|\bsubject line options\b", re.I | re.M)
+CUTOFF_DISCLAIMER = re.compile(
+    r"\bas of my (?:last|latest) (?:update|knowledge)\b|\bmy (?:knowledge|training) cutoff\b|"
+    r"\bwhile specific details are limited\b", re.I)
+FAKE_THREAD = re.compile(r"^\s*(?:re|fwd?)\s*:", re.I)
+MARKDOWN_RESIDUE = re.compile(r"\*\*[^*\n]+\*\*|^#{1,6} \S|`[^`\n]+`", re.M)
+
+
+def message_body(text: str) -> str:
+    """The writer's own words: drop quoted reply lines and the signature block."""
+    text = text.replace("’", "'").split("\n-- \n", 1)[0]
+    return "\n".join(l for l in text.splitlines() if not l.lstrip().startswith(">"))
+
+
+def disqualifiers(text: str, subject: str = "", message_type: str = "cold",
+                  merge_fields_ok: bool = False) -> tuple[list[dict], list[str]]:
+    """Disqualifying tells, each with its rubric ID and the exact span, plus reminders.
+
+    Merge fields like [First Name] are expected in a template sent to a list
+    (merge_fields_ok), so there they become a reminder instead.
+    """
+    body = message_body(text)
+    found, reminders = [], []
+
+    def hit(tell_id, tell, m):
+        found.append({"id": tell_id, "tell": tell, "span": m.group(0).strip()})
+
+    fields = sorted({m.group(0) for m in MERGE_FIELD.finditer(body)})
+    if fields and merge_fields_ok:
+        reminders.append(f"fill the merge fields before sending: {', '.join(fields)}")
+    elif fields:
+        found.append({"id": "B9", "tell": "unfilled merge field", "span": fields[0]})
+    if m := EMPTY_GREETING.search(body):
+        hit("B9", "greeting with the name missing", m)
+    if m := ASSISTANT_ARTIFACT.search(body):
+        hit("P20a", "leftover assistant text", m)
+    if m := CUTOFF_DISCLAIMER.search(body):
+        hit("P21", "AI cutoff disclaimer", m)
+    if subject and message_type != "follow_up" and (m := FAKE_THREAD.search(subject)):
+        hit("B8", "Re:/Fwd: on a first message", m)
+    if m := MARKDOWN_RESIDUE.search(body):
+        hit("B16", "markdown symbols that plain-text email shows literally", m)
+    return found, reminders
+
+
 def recipient_terms(context: str, exclude: str = "") -> list[str]:
     """Distinctive words from recipient context (bio, CRM notes, site copy).
 

@@ -68,7 +68,10 @@ Leave out `owner_samples` when there are none. It returns generic-phrase
 matches, mechanical findings (length, you/I balance, ask count, AI style
 tells such as uniform sentence length and missing contractions), which
 recipient details appear in the draft, `caps` (issues that block a "send"
-verdict), and, with samples, a `voice` comparison against the owner's habits.
+verdict), `disqualifying` (tells that cap the draft at 30, such as an unfilled
+merge field or leftover assistant text), `reminders`, and, with samples, a
+`voice` comparison against the owner's habits. For a template going to a list,
+add `"audience": "segment"` so merge fields become a reminder instead.
 
 If Python is not available, apply the same checks by reading
 `${CLAUDE_PLUGIN_ROOT}/corpus/generic_openers.txt` and the rules in

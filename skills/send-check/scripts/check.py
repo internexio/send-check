@@ -12,7 +12,9 @@ real line breaks inside the JSON are fine.
      "recipient_context": "bio, CRM notes, site copy",
      "owner_samples": ["an email the owner actually sent", "..."]}
 
-message_type is one of cold, follow_up, warm, post_meeting (default cold).
+message_type is one of cold, follow_up, warm, post_meeting, customer (default cold).
+Pass "audience": "segment" for a template going to a list (merge fields allowed).
+The output's disqualifying list holds tells that cap the draft at 30 (scrap).
 owner_samples is optional; with it, the output includes a voice match.
 Standard library only. Runs from the plugin root layout:
 skills/send-check/scripts/check.py -> scorers/naive/.
@@ -64,7 +66,12 @@ def main() -> None:
         opener = next(m["phrase"] for m in sl["matches"] if m["in_opener"] and m["words"] >= 3)
         caps.append(f'opens with a generic phrase: "{opener}"')
 
-    out = {"mechanical": mech, "slop": sl, "caps": caps}
+    disqualifying, reminders = mechanical.disqualifiers(
+        text, req.get("subject", ""), req.get("message_type", "cold"),
+        merge_fields_ok=req.get("audience") == "segment" or req.get("message_type") == "customer")
+
+    out = {"mechanical": mech, "slop": sl, "caps": caps,
+           "disqualifying": disqualifying, "reminders": reminders}
     samples = req.get("owner_samples") or []
     if samples:
         out["voice"] = voice.compare(text, samples)
